@@ -134,5 +134,12 @@ dataset/
 # PyCharm settings
 .idea
 
+# VSCode settings
+.vscode
+
 # Logs directory
 logs/
+
+# Experiments directory
+AutoML*/
+experiments/
