@@ -45,7 +45,6 @@ def main(
     logger.info(f'Target.........: {target}')
     logger.info(f'Scale features.: {scale_features}')
     logger.info(f'Scale target...: {scale_target}')
-    logger.info(f'Target.........: {target}')
     logger.info(f'Mode...........: {mode}')
     logger.info(f'Metric.........: {metric}')
     logger.info(f'Algorithms.....: {algorithms}')
@@ -100,7 +99,7 @@ def main(
         algorithms=algorithms,
         random_state=seed,
         validation_strategy=validation_strategy,
-        total_time_limit=60,
+        total_time_limit=3600,
         optuna_time_budget=3600,
     )
 
