@@ -9,6 +9,7 @@ from pathlib import Path
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import shutil
+import numpy as np
 import pandas as pd
 from math import sqrt
 from sklearn.metrics import r2_score
@@ -32,6 +33,7 @@ from supervised.automl import AutoML
 def main(
     data_path: str,
     target: str,
+    features: List[str],
     feature_scale: str,
     target_scale: str,
     mode: str,
@@ -51,15 +53,9 @@ def main(
 
     # Read source data
     df = pd.read_excel(data_path)
-    features = [
-        'H',
-        'D',
-        'F',
-        'R',
-        'T',
-    ]
-    X = df[features]
-    y = df[target]
+    X = df[features].values
+    y = df[target].values
+    y = y.reshape(-1, 1)
 
     # Preprocess features
     if feature_scale == 'MinMax':
@@ -71,19 +67,19 @@ def main(
     if feature_scale == 'Power':
         input_scaler = PowerTransformer().fit(X)
 
-    X = pd.DataFrame(input_scaler.transform(X), columns=features) if feature_scale != 'Raw' else X
+    X = input_scaler.transform(X) if feature_scale != 'Raw' else X
 
     # Preprocess target
     if target_scale == 'MinMax':
-        output_scaler = MinMaxScaler().fit(y.to_frame())
+        output_scaler = MinMaxScaler().fit(y)
     if target_scale == 'Standard':
-        output_scaler = StandardScaler().fit(y.to_frame())
+        output_scaler = StandardScaler().fit(y)
     if target_scale == 'Robust':
-        output_scaler = RobustScaler().fit(y.to_frame())
+        output_scaler = RobustScaler().fit(y)
     if target_scale == 'Power':
-        output_scaler = PowerTransformer(method='yeo-johnson').fit(y.to_frame())
+        output_scaler = PowerTransformer(method='yeo-johnson').fit(y)
 
-    y = pd.Series(output_scaler.transform(y.to_frame()).squeeze()) if target_scale != 'Raw' else y
+    y = output_scaler.transform(y) if target_scale != 'Raw' else y
 
     validation_strategy = {
         'validation_type': 'kfold',
@@ -116,7 +112,7 @@ def main(
         total_time_limit=3600,
         optuna_time_budget=3600,
     )
-    automl.fit(X, y)
+    automl.fit(X, y.squeeze())
     automl.report()
 
     # Save input data scaler
@@ -133,18 +129,15 @@ def main(
 
     # Make predictions
     y_pred = automl.predict(X)
-    y_pred = pd.Series(y_pred)
+    y_pred = y_pred.reshape(-1, 1)
 
     # Scale back the data to the original representation
     if feature_scale != 'Raw':
         X = input_scaler.inverse_transform(X)
-        X = pd.DataFrame(X, columns=features)
 
     if target_scale != 'Raw':
-        y = output_scaler.inverse_transform(y.to_frame())
-        y = pd.DataFrame(y, columns=[target])
-        y_pred = output_scaler.inverse_transform(y_pred.to_frame())
-        y_pred = pd.DataFrame(y_pred, columns=[target])
+        y = output_scaler.inverse_transform(y)
+        y_pred = output_scaler.inverse_transform(y_pred)
 
     mae_val = mean_absolute_error(y_true=y, y_pred=y_pred)
     mse_val = mean_squared_error(y_true=y, y_pred=y_pred)
@@ -157,19 +150,12 @@ def main(
     logger.info(f'RMSE...........: {rmse_val:.3f}')
     logger.info(f'MSE............: {mse_val:.3f}')
     logger.info(f'R2.............: {r2_val:.3f}')
-    logger.info(f'MAPE...........: {mape_val:.2%}')
+    logger.info(f'MAPE...........: {mape_val:.1%}')
 
-    y.reset_index(drop=True, inplace=True)
-    y_pred.reset_index(drop=True, inplace=True)
-    df_out = pd.concat(
-        [
-            X,
-            y.squeeze().rename('{:s}_gt'.format(target)),
-            y_pred.squeeze().rename('{:s}_pred'.format(target))
-        ],
-        axis=1,
-    )
+    data = np.hstack([X, y, y_pred])
+    df_out = pd.DataFrame(data, columns=[*features, f'{target}_gt', f'{target}_pred'])
     df_out['Residual'] = df_out['{:s}_gt'.format(target)] - df_out['{:s}_pred'.format(target)]
+    df_out['Error'] = df_out['Residual'].abs()
     df_out.to_excel(
         f'{experiment_path}/predictions.xlsx',
         sheet_name='Predictions',
@@ -195,10 +181,19 @@ if __name__ == '__main__':
         'Neural Network',
         'Nearest Neighbors',
         ]
-    
+
+    FEATURES = [
+        'H',
+        'D',
+        'F',
+        'R',
+        'T',
+    ]
+
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
     parser.add_argument('--target', default='VMS', type=str, help='Lumen or VMS')
+    parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--feature_scale', default='Standard', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Raw', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--mode', default='Compete', type=str)
@@ -211,6 +206,7 @@ if __name__ == '__main__':
     main(
         data_path=args.data_path,
         target=args.target,
+        features=args.features,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
         mode=args.mode,
