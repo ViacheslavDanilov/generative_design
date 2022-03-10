@@ -3,17 +3,19 @@ import time
 import logging
 import warnings
 import argparse
+from pickle import dump
 from typing import List
 from pathlib import Path
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+import shutil
 import pandas as pd
 from math import sqrt
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_absolute_percentage_error
-from sklearn.preprocessing import StandardScaler, RobustScaler, QuantileTransformer, PowerTransformer
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -30,25 +32,22 @@ from supervised.automl import AutoML
 def main(
     data_path: str,
     target: str,
-    scale_features: bool,
-    scale_target: bool,
+    feature_scale: str,
+    target_scale: str,
     mode: str,
     metric: str,
     algorithms: List[str],
     seed: int,
     save_dir: str,
 ):
-
-    # Log main parameters
-    logger.info('')
-    logger.info(f'Data path......: {data_path}')
-    logger.info(f'Target.........: {target}')
-    logger.info(f'Scale features.: {scale_features}')
-    logger.info(f'Scale target...: {scale_target}')
-    logger.info(f'Mode...........: {mode}')
-    logger.info(f'Metric.........: {metric}')
-    logger.info(f'Algorithms.....: {algorithms}')
-    logger.info(f'Seed...........: {seed}')
+    
+    t = time.localtime()
+    current_time = time.strftime('%H%M_%d%m', t)
+    experiment_path = os.path.join(
+        save_dir,
+        f'{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{current_time}'
+    )
+    os.makedirs(experiment_path, exist_ok=True)
 
     # Read source data
     df = pd.read_excel(data_path)
@@ -62,21 +61,29 @@ def main(
     X = df[features]
     y = df[target]
 
-    # Preprocess data
-    if scale_features:
-        # scaler_input = StandardScaler().fit(X)
-        # scaler_input = QuantileTransformer().fit(X)
-        # scaler_input = PowerTransformer().fit(X)
-        scaler_features = RobustScaler().fit(X)
-        X = pd.DataFrame(scaler_features.transform(X), columns=features)
+    # Preprocess features
+    if feature_scale == 'MinMax':
+        input_scaler = MinMaxScaler().fit(X)
+    if feature_scale == 'Standard':
+        input_scaler = StandardScaler().fit(X)
+    if feature_scale == 'Robust':
+        input_scaler = RobustScaler().fit(X)
+    if feature_scale == 'Power':
+        input_scaler = PowerTransformer().fit(X)
 
-    if scale_target:
-        # scaler_output = StandardScaler().fit(y.to_frame())
-        # scaler_output = QuantileTransformer().fit(y.to_frame())
-        # scaler_output = RobustScaler().fit(y.to_frame())
-        # scaler_output = PowerTransformer(method='yeo-johnson').fit(y.to_frame())
-        scaler_target = RobustScaler().fit(y.to_frame())
-        y = pd.Series(scaler_target.transform(y.to_frame()).squeeze())
+    X = pd.DataFrame(input_scaler.transform(X), columns=features) if feature_scale != 'Raw' else X
+
+    # Preprocess target
+    if target_scale == 'MinMax':
+        output_scaler = MinMaxScaler().fit(y.to_frame())
+    if target_scale == 'Standard':
+        output_scaler = StandardScaler().fit(y.to_frame())
+    if target_scale == 'Robust':
+        output_scaler = RobustScaler().fit(y.to_frame())
+    if target_scale == 'Power':
+        output_scaler = PowerTransformer(method='yeo-johnson').fit(y.to_frame())
+
+    y = pd.Series(output_scaler.transform(y.to_frame()).squeeze()) if target_scale != 'Raw' else y
 
     validation_strategy = {
         'validation_type': 'kfold',
@@ -86,11 +93,18 @@ def main(
         'random_seed': seed,
     }
 
-    t = time.localtime()
-    current_time = time.strftime('%H%M%S_%d%m', t)
-    experiment_path = os.path.join(save_dir, f'{target}_{mode.lower()}_{metric}_{current_time}')
+    # Log main parameters
+    logger.info(f'Data path......: {data_path}')
+    logger.info(f'Target.........: {target}')
+    logger.info(f'Scale features.: {feature_scale}')
+    logger.info(f'Scale target...: {target_scale}')
+    logger.info(f'Mode...........: {mode}')
+    logger.info(f'Metric.........: {metric}')
+    logger.info(f'Algorithms.....: {algorithms}')
+    logger.info(f'Seed...........: {seed}')
     logger.info(f'Directory......: {experiment_path}')
 
+    # Train models
     automl = AutoML(
         results_path=experiment_path,
         ml_task='regression',
@@ -102,18 +116,41 @@ def main(
         total_time_limit=3600,
         optuna_time_budget=3600,
     )
-
     automl.fit(X, y)
     automl.report()
+
+    # Save input data scaler
+    try:
+        dump(input_scaler, open(os.path.join(experiment_path, 'input_scaler.pkl'), 'wb'))
+    except Exception as e:
+        pass
+
+    # Save output data scaler
+    try:
+        dump(output_scaler, open(os.path.join(experiment_path, 'output_scaler.pkl'), 'wb'))
+    except Exception as e:
+        pass
 
     # Make predictions
     y_pred = automl.predict(X)
     y_pred = pd.Series(y_pred)
-    mae_val = mean_absolute_error(y_true=y.squeeze(), y_pred=y_pred)
-    mse_val = mean_squared_error(y_true=y.squeeze(), y_pred=y_pred)
-    rmse_val = sqrt(mean_squared_error(y_true=y.squeeze(), y_pred=y_pred))
-    r2_val = r2_score(y_true=y.squeeze(), y_pred=y_pred)
-    mape_val = mean_absolute_percentage_error(y_true=y.squeeze(), y_pred=y_pred)
+
+    # Scale back the data to the original representation
+    if feature_scale != 'Raw':
+        X = input_scaler.inverse_transform(X)
+        X = pd.DataFrame(X, columns=features)
+
+    if target_scale != 'Raw':
+        y = output_scaler.inverse_transform(y.to_frame())
+        y = pd.DataFrame(y, columns=[target])
+        y_pred = output_scaler.inverse_transform(y_pred.to_frame())
+        y_pred = pd.DataFrame(y_pred, columns=[target])
+
+    mae_val = mean_absolute_error(y_true=y, y_pred=y_pred)
+    mse_val = mean_squared_error(y_true=y, y_pred=y_pred)
+    rmse_val = sqrt(mean_squared_error(y_true=y, y_pred=y_pred))
+    r2_val = r2_score(y_true=y, y_pred=y_pred)
+    mape_val = mean_absolute_percentage_error(y_true=y, y_pred=y_pred)
 
     logger.info(f'Metrics........:')
     logger.info(f'MAE............: {mae_val:.3f}')
@@ -122,22 +159,13 @@ def main(
     logger.info(f'R2.............: {r2_val:.3f}')
     logger.info(f'MAPE...........: {mape_val:.2%}')
 
-    # Save dataframe
-    if scale_features:
-        X = scaler_features.inverse_transform(X)
-        X = pd.DataFrame(X, columns=features)
-
-    if scale_target:
-        y = scaler_target.inverse_transform(y.to_frame())
-        y = pd.DataFrame(y, columns=[target])
-
     y.reset_index(drop=True, inplace=True)
     y_pred.reset_index(drop=True, inplace=True)
     df_out = pd.concat(
         [
             X,
             y.squeeze().rename('{:s}_gt'.format(target)),
-            y_pred.rename('{:s}_pred'.format(target))
+            y_pred.squeeze().rename('{:s}_pred'.format(target))
         ],
         axis=1,
     )
@@ -150,6 +178,8 @@ def main(
         startrow=0,
         startcol=0,
     )
+
+    shutil.copy(f'logs/{Path(__file__).stem}.log', experiment_path)
 
 
 if __name__ == '__main__':
@@ -169,8 +199,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
     parser.add_argument('--target', default='VMS', type=str, help='Lumen or VMS')
-    parser.add_argument('--scale_features', action='store_true')
-    parser.add_argument('--scale_target', action='store_true')
+    parser.add_argument('--feature_scale', default='Standard', type=str, help='Raw, MinMax, Standard, Robust, Power')
+    parser.add_argument('--target_scale', default='Raw', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--mode', default='Compete', type=str)
     parser.add_argument('--metric', default='mae', type=str)
     parser.add_argument('--algorithms', default=ALGORITHMS, nargs='+', type=str)
@@ -181,8 +211,8 @@ if __name__ == '__main__':
     main(
         data_path=args.data_path,
         target=args.target,
-        scale_features=args.scale_features,
-        scale_target=args.scale_target,
+        feature_scale=args.feature_scale,
+        target_scale=args.target_scale,
         mode=args.mode,
         metric=args.metric,
         algorithms=args.algorithms,
