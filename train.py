@@ -150,7 +150,7 @@ def main(
     logger.info(f'RMSE...........: {rmse_val:.3f}')
     logger.info(f'MSE............: {mse_val:.3f}')
     logger.info(f'R2.............: {r2_val:.3f}')
-    logger.info(f'MAPE...........: {mape_val:.1%}')
+    logger.info(f'MAPE...........: {mape_val:.2%}')
 
     data = np.hstack([X, y, y_pred])
     df_out = pd.DataFrame(data, columns=[*features, f'{target}_gt', f'{target}_pred'])
