@@ -139,6 +139,13 @@ def main(
         y = output_scaler.inverse_transform(y)
         y_pred = output_scaler.inverse_transform(y_pred)
 
+    if np.any(np.isnan(y_pred)):
+        nan_idx = np.isnan(y_pred).squeeze()
+        X = np.delete(X, nan_idx, axis=0)
+        y = np.delete(y, nan_idx, axis=0).reshape(-1, 1)
+        y_pred = np.delete(y_pred, nan_idx).reshape(-1, 1)
+        logger.info(f'Found and dropped {nan_idx.sum()} NaNs in predictions')
+
     mae_val = mean_absolute_error(y_true=y, y_pred=y_pred)
     mse_val = mean_squared_error(y_true=y, y_pred=y_pred)
     rmse_val = sqrt(mean_squared_error(y_true=y, y_pred=y_pred))
