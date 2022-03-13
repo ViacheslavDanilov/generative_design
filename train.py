@@ -12,11 +12,11 @@ import shutil
 import numpy as np
 import pandas as pd
 from math import sqrt
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import *
+from scipy.stats import pearsonr
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
+
+from tools.utils import get_golden_features
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -34,6 +34,7 @@ def main(
     data_path: str,
     target: str,
     features: List[str],
+    golden_features_path: str,
     feature_scale: str,
     target_scale: str,
     mode: str,
@@ -42,13 +43,22 @@ def main(
     seed: int,
     save_dir: str,
 ):
-    
+
+    if golden_features_path is not None:
+        assert os.path.isfile(golden_features_path), 'JSON file with golden features is not found'
+
     t = time.localtime()
     current_time = time.strftime('%H%M_%d%m', t)
-    experiment_path = os.path.join(
-        save_dir,
-        f'{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{current_time}'
-    )
+    if golden_features_path is not None:
+        experiment_path = os.path.join(
+            save_dir,
+            f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{'Golden'}_{current_time}"
+        )
+    else:
+        experiment_path = os.path.join(
+            save_dir,
+            f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{'Source'}_{current_time}"
+        )
     os.makedirs(experiment_path, exist_ok=True)
 
     # Read source data
@@ -68,6 +78,13 @@ def main(
         input_scaler = PowerTransformer().fit(X)
 
     X = input_scaler.transform(X) if feature_scale != 'Raw' else X
+
+    # Add golden features
+    if golden_features_path is not None:
+        X = get_golden_features(
+            input_data=X,
+            golden_features_path=golden_features_path,
+        )
 
     # Preprocess target
     if target_scale == 'MinMax':
@@ -99,6 +116,7 @@ def main(
     logger.info(f'Algorithms.....: {algorithms}')
     logger.info(f'Seed...........: {seed}')
     logger.info(f'Directory......: {experiment_path}')
+    logger.info(f'Golden features: {golden_features_path}')
 
     # Train models
     automl = AutoML(
@@ -132,6 +150,7 @@ def main(
     y_pred = y_pred.reshape(-1, 1)
 
     # Scale back the data to the original representation
+    X = X[:, :len(features)]
     if feature_scale != 'Raw':
         X = input_scaler.inverse_transform(X)
 
@@ -151,6 +170,7 @@ def main(
     rmse_val = sqrt(mean_squared_error(y_true=y, y_pred=y_pred))
     r2_val = r2_score(y_true=y, y_pred=y_pred)
     mape_val = mean_absolute_percentage_error(y_true=y, y_pred=y_pred)
+    pearson_corr, _ = pearsonr(x=y.squeeze(), y=y_pred.squeeze())
 
     logger.info(f'Metrics........:')
     logger.info(f'MAE............: {mae_val:.3f}')
@@ -158,6 +178,7 @@ def main(
     logger.info(f'MSE............: {mse_val:.3f}')
     logger.info(f'R2.............: {r2_val:.3f}')
     logger.info(f'MAPE...........: {mape_val:.2%}')
+    logger.info(f'Pearson........: {pearson_corr:.2%}')
 
     data = np.hstack([X, y, y_pred])
     df_out = pd.DataFrame(data, columns=[*features, f'{target}_gt', f'{target}_pred'])
@@ -172,6 +193,11 @@ def main(
         startcol=0,
     )
 
+    logger.info('')
+    logger.info('Model training complete')
+
+    if golden_features_path is not None:
+        shutil.copy(golden_features_path, os.path.join(experiment_path, 'new_features.json'))
     shutil.copy(f'logs/{Path(__file__).stem}.log', experiment_path)
 
 
@@ -201,6 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
     parser.add_argument('--target', default='VMS', type=str, help='Lumen or VMS')
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
+    parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='Standard', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Raw', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--mode', default='Compete', type=str)
@@ -214,6 +241,7 @@ if __name__ == '__main__':
         data_path=args.data_path,
         target=args.target,
         features=args.features,
+        golden_features_path=args.golden_features_path,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
         mode=args.mode,
@@ -222,6 +250,3 @@ if __name__ == '__main__':
         seed=args.seed,
         save_dir=args.save_dir,
     )
-
-    logger.info('')
-    logger.info('Model training complete')
