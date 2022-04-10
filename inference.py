@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import argparse
 from pathlib import Path
@@ -6,8 +7,6 @@ from typing import List, Union
 
 import numpy as np
 import pandas as pd
-
-from tools.model import Regressor
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -17,7 +16,8 @@ logging.basicConfig(
     filemode='w',
     level=logging.INFO,
 )
-logger = logging.getLogger(__name__)        # TODO: fix logger
+logger = logging.getLogger(__name__)
+from tools.model import Regressor
 
 
 def main(
@@ -47,15 +47,28 @@ def main(
     else:
         raise ValueError('Unsupported data type')
 
-    # TODO: Add support of single model prediction
-    logger.info('Point 0')
-    model_lumen = Regressor(lumen_model_path)
-    model_vms = Regressor(vms_model_path)
-    logger.info('Point 1')
-    lumen = model_lumen(data)
-    logger.info('Point 2')
-    vms = model_vms(data)
-    logger.info('Point 3')
+    logger.info('')
+    logger.info(f'Model (Lumen).............: {lumen_model_path}')
+    logger.info(f'Model (VMS)...............: {vms_model_path}')
+
+    lumen = np.empty((data.shape[0], 1))
+    lumen[:] = np.NaN
+    if isinstance(lumen_model_path, str) and lumen_model_path is not None:
+        start = time.time()
+        model_lumen = Regressor(lumen_model_path)
+        lumen = model_lumen(data)
+        end = time.time()
+        logger.info(f'Lumen prediction took.....: {end - start:.0f} seconds')
+
+    vms = np.empty((data.shape[0], 1))
+    vms[:] = np.NaN
+    if isinstance(vms_model_path, str) and vms_model_path is not None:
+        start = time.time()
+        model_vms = Regressor(vms_model_path)
+        vms = model_vms(data)
+        end = time.time()
+        logger.info(f'VMS prediction took.......: {end - start:.0f} seconds')
+
     data = np.hstack([data, lumen, vms])
     df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'VMS'])
     df_out.to_excel(
@@ -67,7 +80,6 @@ def main(
         startcol=0,
     )
 
-    logger.info('')
     logger.info('Prediction complete')
 
 
@@ -75,8 +87,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data', default='dataset/data_test.xlsx')
-    parser.add_argument('--lumen_model_path', type=str)
-    parser.add_argument('--vms_model_path', type=str)
+    parser.add_argument('--lumen_model_path', default=None, type=str)
+    parser.add_argument('--vms_model_path', default=None, type=str)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
