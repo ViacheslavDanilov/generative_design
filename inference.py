@@ -24,6 +24,7 @@ def main(
     data: Union[List[int], np.ndarray, pd.DataFrame, str],
     lumen_model_path: str,
     vms_model_path: str,
+    use_golden_features: bool,
     save_dir: str,
 ) -> None:
 
@@ -50,37 +51,51 @@ def main(
     logger.info('')
     logger.info(f'Model (Lumen).............: {lumen_model_path}')
     logger.info(f'Model (VMS)...............: {vms_model_path}')
+    logger.info(f'Use golden features.......: {use_golden_features}')
 
     lumen = np.empty((data.shape[0], 1))
     lumen[:] = np.NaN
-    if isinstance(lumen_model_path, str) and lumen_model_path is not None:
+    if (
+            isinstance(lumen_model_path, str)
+            and lumen_model_path is not None
+    ):
         start = time.time()
-        model_lumen = Regressor(lumen_model_path)
+        model_lumen = Regressor(
+            model_path=lumen_model_path,
+            use_golden_features=use_golden_features,
+        )
         lumen = model_lumen(data)
         end = time.time()
         logger.info(f'Lumen prediction took.....: {end - start:.0f} seconds')
 
     vms = np.empty((data.shape[0], 1))
     vms[:] = np.NaN
-    if isinstance(vms_model_path, str) and vms_model_path is not None:
+    if (
+            isinstance(vms_model_path, str)
+            and vms_model_path is not None
+    ):
         start = time.time()
-        model_vms = Regressor(vms_model_path)
+        model_vms = Regressor(
+            model_path=vms_model_path,
+            use_golden_features=use_golden_features,
+        )
         vms = model_vms(data)
         end = time.time()
         logger.info(f'VMS prediction took.......: {end - start:.0f} seconds')
 
     data = np.hstack([data, lumen, vms])
     df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'VMS'])
+    save_path = os.path.join(save_dir, 'predictions.xlsx')
     df_out.to_excel(
-        os.path.join(save_dir, 'predictions.xlsx'),
+        save_path,
         sheet_name='Predictions',
         index=True,
         index_label='Design',
         startrow=0,
         startcol=0,
     )
-
-    logger.info('Prediction complete')
+    logger.info(f'Predictions saved to......: {save_path}')
+    logger.info('Complete')
 
 
 if __name__ == '__main__':
@@ -89,6 +104,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', default='dataset/data_test.xlsx')
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--vms_model_path', default=None, type=str)
+    parser.add_argument('--use_golden_features', action='store_true')
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
@@ -96,5 +112,6 @@ if __name__ == '__main__':
         data=args.data,
         lumen_model_path=args.lumen_model_path,
         vms_model_path=args.vms_model_path,
+        use_golden_features=args.use_golden_features,
         save_dir=args.save_dir,
     )
