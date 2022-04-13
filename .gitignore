@@ -143,3 +143,9 @@ logs/
 # Experiments directory
 AutoML*/
 experiments/
+
+# Models
+models/
+
+# Different computations
+calculations/
