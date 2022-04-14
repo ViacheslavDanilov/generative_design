@@ -3,6 +3,17 @@ import json
 
 import numpy as np
 
+'''A function that takes 'Rel_VMS' and 'Rel_Lumen' as input and 
+   return total efficiency score, normalized in the range 0-1.'''
+def efficiency_score(Rel_Area, Rel_VMS):
+    Relative_Area_function = lambda x: 2 / (1 + np.exp((1 - x) * 10))
+    Stress_funtion = lambda x: 1 - x if (x < 1) else 0
+
+    Relative_Area_function_list = [Relative_Area_function(item) for item in Rel_Area]
+    Stress_funtion_list = [Stress_funtion(item) for item in Rel_VMS]
+    Efficiency_functiuon_score = [(1 - a) * b for a, b in zip(Stress_funtion_list, Relative_Area_function_list)]
+
+    return Efficiency_functiuon_score
 
 def get_golden_features(
         input_data: np.ndarray,
