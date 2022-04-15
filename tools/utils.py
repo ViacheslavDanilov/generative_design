@@ -15,6 +15,7 @@ def efficiency_score(Rel_Area, Rel_VMS):
 
     return Efficiency_functiuon_score
 
+
 def get_golden_features(
         input_data: np.ndarray,
         golden_features_path: str,
@@ -43,3 +44,7 @@ def get_golden_features(
         output_data = np.hstack([output_data, _feature_data])
 
     return output_data
+
+if __name__ == '__main__':
+
+    c =
