@@ -32,3 +32,18 @@ def get_golden_features(
         output_data = np.hstack([output_data, _feature_data])
 
     return output_data
+
+
+def calc_mape(
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+) -> float:
+
+    null_idx = np.where(y_true == 0)[0]
+    if null_idx.size > 0:
+        y_true = np.delete(y_true, null_idx, axis=0)
+        y_pred = np.delete(y_pred, null_idx, axis=0)
+
+    _mape = np.mean(np.abs((y_true - y_pred) / y_true))
+    mape = float(_mape)
+    return mape
