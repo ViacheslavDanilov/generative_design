@@ -8,6 +8,8 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
+from tools.utils import score_func
+
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -83,8 +85,12 @@ def main(
         end = time.time()
         logger.info(f'VMS prediction took.......: {end - start:.0f} seconds')
 
-    data = np.hstack([data, lumen, vms])
-    df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'VMS'])
+    material_UTS = 10
+    score = score_func(lumen, vms, material_UTS)
+
+    data = np.hstack([data, lumen, vms, score])
+    df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'VMS', 'Score'])
+    os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'predictions.xlsx')
     df_out.to_excel(
         save_path,
