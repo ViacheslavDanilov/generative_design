@@ -17,7 +17,7 @@ from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
-from tools.utils import get_golden_features
+from tools.utils import get_golden_features, calc_mape
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -33,13 +33,13 @@ from supervised.automl import AutoML
 
 def main(
     data_path: str,
+    mode: str,
     target: str,
     features: List[str],
     test_size: float,
     golden_features_path: str,
     feature_scale: str,
     target_scale: str,
-    mode: str,
     metric: str,
     algorithms: List[str],
     seed: int,
@@ -115,6 +115,7 @@ def main(
     logger.info(f'Data path..........: {data_path}')
     logger.info(f'Target.............: {target}')
     logger.info(f'Scale features.....: {feature_scale}')
+    logger.info(f'Scale target.......: {target_scale}')
     logger.info(f'Train/Val ratio....: {100*(1-test_size):.0f}/{100*test_size:.0f}')
     logger.info(f'Mode...............: {mode}')
     logger.info(f'Metric.............: {metric}')
@@ -133,7 +134,7 @@ def main(
         random_state=seed,
         validation_strategy=validation_strategy,
         total_time_limit=3600,
-        optuna_time_budget=3600,
+        optuna_time_budget=180,
         explain_level=2,
     )
     automl.fit(
@@ -169,11 +170,13 @@ def main(
         y_pred = output_scaler.inverse_transform(y_pred)
 
     if np.any(np.isnan(y_pred)):
-        nan_idx = np.isnan(y_pred).squeeze()
-        X = np.delete(X, nan_idx, axis=0)
-        y = np.delete(y, nan_idx, axis=0).reshape(-1, 1)
-        y_pred = np.delete(y_pred, nan_idx).reshape(-1, 1)
-        logger.info(f'Found and dropped {nan_idx.sum()} NaNs in predictions')
+        nan_mask = np.isnan(y_pred).squeeze()
+        nan_idx = np.where(nan_mask == True)[0]
+        _train_idx = [i for i in train_idx if i not in nan_idx]
+        train_idx = np.array(_train_idx)
+        _val_idx = [i for i in val_idx if i not in nan_idx]
+        val_idx = np.array(_val_idx)
+        logger.info(f'Found and dropped {nan_mask.sum()} NaNs in predictions')
 
     # Compute all metrics
     mae_train = mean_absolute_error(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
@@ -188,15 +191,15 @@ def main(
     r2_train = r2_score(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
     r2_val = r2_score(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
 
-    mape_train = mean_absolute_percentage_error(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
-    mape_val = mean_absolute_percentage_error(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
+    mape_train = calc_mape(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
+    mape_val = calc_mape(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
 
     pearson_train, _ = pearsonr(x=np.take(y, train_idx).squeeze(), y=np.take(y_pred, train_idx).squeeze())
     pearson_val, _ = pearsonr(x=np.take(y, val_idx).squeeze(), y=np.take(y_pred, val_idx).squeeze())
 
     logger.info('')
-    logger.info(f'Metrics............: Train / Test')
-    logger.info(f'MAPE...............: {mape_train:.2%} / {mape_val:.2%}')
+    logger.info(f'Metrics............: Train / Val')
+    logger.info(f'MAPE...............: {mape_train:.2} / {mape_val:.2}')
     logger.info(f'MAE................: {mae_train:.3f} / {mae_val:.3f}')
     logger.info(f'RMSE...............: {rmse_train:.3f} / {rmse_val:.3f}')
     logger.info(f'MSE................: {mse_train:.3f} / {mse_val:.3f}')
@@ -249,31 +252,31 @@ if __name__ == '__main__':
         'Linear',
         'Decision Tree',
         'Random Forest',
-        'Nearest Neighbors',
-        'Neural Network',
         'Extra Trees',
+        'Neural Network',
         'LightGBM',
         'Xgboost',
         'CatBoost',
         ]
 
     FEATURES = [
-        'H',
-        'D',
-        'F',
-        'R',
-        'T',
+        'HGT',
+        'DIA',
+        'ANG',
+        'CVT',
+        'THK',
+        'EM',
     ]
 
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
-    parser.add_argument('--target', default='VMS', type=str, help='Lumen or VMS')
+    parser.add_argument('--mode', default='Explain', type=str)
+    parser.add_argument('--target', default='Smax', type=str, help='LMN, VMS, Smax, LEmax')
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--test_size', default=0.2, type=float, help='size of the test split')
     parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='Robust', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Power', type=str, help='Raw, MinMax, Standard, Robust, Power')
-    parser.add_argument('--mode', default='Compete', type=str)
     parser.add_argument('--metric', default='mae', type=str)
     parser.add_argument('--algorithms', default=ALGORITHMS, nargs='+', type=str)
     parser.add_argument('--seed', default=11, type=int)
@@ -282,13 +285,13 @@ if __name__ == '__main__':
 
     main(
         data_path=args.data_path,
+        mode=args.mode,
         target=args.target,
         features=args.features,
         test_size=args.test_size,
         golden_features_path=args.golden_features_path,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
-        mode=args.mode,
         metric=args.metric,
         algorithms=args.algorithms,
         seed=args.seed,
