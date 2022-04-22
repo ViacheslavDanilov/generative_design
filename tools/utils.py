@@ -4,28 +4,54 @@ import json
 import numpy as np
 
 
-def score_func(
-        rel_area: np.ndarray = 0,
-        stress: np.ndarray = 0,
-        stress_max: float = 0,
-) -> np.ndarray:
-    rel_stress = stress / stress_max
-    relative_area_func = lambda a: 2 / (1 + np.exp((1 - a) * 10))
-    stress_func = lambda s: 1-s if s < 1 else 0
-    stress_score = np.ndarray(0)
-    for i in rel_stress:
-        stress_score = np.append(stress_score, stress_func(i))
-    stress_score = stress_score.reshape(len(stress_score), 1)
-    area_score = np.nan_to_num(relative_area_func(rel_area))
-    score = stress_score * area_score
-    return score
+def calculate_lumen_score(
+        lumen_abs: float,
+) -> float:
+    lumen_score = 2 / (1 + np.exp((1 - lumen_abs) * 10))
+    return lumen_score
+
+
+def calculate_stress_score(
+        stress_abs: float,
+        stress_threshold: float = 10,
+) -> float:
+    stress_rel = stress_abs / stress_threshold
+    stress_score = 1 - stress_rel if stress_rel < 1 else 0
+    return stress_score
+
+
+def calculate_design_score(
+        lumen_abs: float,
+        stress_abs: float,
+        stress_threshold: float,
+) -> float:
+
+    if (
+            not np.isnan(lumen_abs)
+            and not np.isnan(stress_abs)
+    ):
+
+        lumen_score = calculate_lumen_score(
+            lumen_abs=lumen_abs,
+        )
+
+        stress_score = calculate_stress_score(
+            stress_abs=stress_abs,
+            stress_threshold=stress_threshold,
+        )
+
+        design_score = np.sqrt(lumen_score * stress_score)
+
+    else:
+        design_score = float('nan')
+
+    return design_score
 
 
 def get_golden_features(
         input_data: np.ndarray,
         golden_features_path: str,
 ) -> np.ndarray:
-
     f = open(golden_features_path)
     _golden_features = json.load(f)
     golden_features = _golden_features['new_features']
