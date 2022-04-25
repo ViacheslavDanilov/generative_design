@@ -21,7 +21,7 @@ from tools.model import Regressor
 
 
 def main(
-    data: Union[List[int], np.ndarray, pd.DataFrame, str],
+    data: Union[List[float], np.ndarray, pd.DataFrame, str],
     lumen_model_path: str,
     vms_model_path: str,
     use_golden_features: bool,
