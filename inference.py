@@ -8,6 +8,8 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
+from tools.utils import calculate_design_score
+
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -23,8 +25,9 @@ from tools.model import Regressor
 def main(
     data: Union[List[int], np.ndarray, pd.DataFrame, str],
     lumen_model_path: str,
-    vms_model_path: str,
+    stress_model_path: str,
     use_golden_features: bool,
+    stress_threshold: float,
     save_dir: str,
 ) -> None:
 
@@ -50,7 +53,7 @@ def main(
 
     logger.info('')
     logger.info(f'Model (Lumen).............: {lumen_model_path}')
-    logger.info(f'Model (VMS)...............: {vms_model_path}')
+    logger.info(f'Model (Stress)............: {stress_model_path}')
     logger.info(f'Use golden features.......: {use_golden_features}')
 
     lumen = np.empty((data.shape[0], 1))
@@ -68,23 +71,33 @@ def main(
         end = time.time()
         logger.info(f'Lumen prediction took.....: {end - start:.0f} seconds')
 
-    vms = np.empty((data.shape[0], 1))
-    vms[:] = np.NaN
+    stress = np.empty((data.shape[0], 1))
+    stress[:] = np.NaN
     if (
-            isinstance(vms_model_path, str)
-            and vms_model_path is not None
+            isinstance(stress_model_path, str)
+            and stress_model_path is not None
     ):
         start = time.time()
-        model_vms = Regressor(
-            model_path=vms_model_path,
+        model_stress = Regressor(
+            model_path=stress_model_path,
             use_golden_features=use_golden_features,
         )
-        vms = model_vms(data)
+        stress = model_stress(data)
         end = time.time()
-        logger.info(f'VMS prediction took.......: {end - start:.0f} seconds')
+        logger.info(f'Stress prediction took.......: {end - start:.0f} seconds')
 
-    data = np.hstack([data, lumen, vms])
-    df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'VMS'])
+    score = np.empty((data.shape[0], 1))
+    score[:] = np.NaN
+    for idx, (_lumen, _stress) in enumerate(zip(lumen.squeeze(), stress.squeeze())):
+        score[idx] = calculate_design_score(
+            lumen_abs=_lumen,
+            stress_abs=_stress,
+            stress_threshold=stress_threshold,
+        )
+
+    data = np.hstack([data, lumen, stress, score])
+    df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'Stress', 'Score'])
+    os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'predictions.xlsx')
     df_out.to_excel(
         save_path,
@@ -103,15 +116,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data', default='dataset/data_test.xlsx')
     parser.add_argument('--lumen_model_path', default=None, type=str)
-    parser.add_argument('--vms_model_path', default=None, type=str)
+    parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--use_golden_features', action='store_true')
+    parser.add_argument('--stress_threshold', default=10, type=float)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
     main(
         data=args.data,
         lumen_model_path=args.lumen_model_path,
-        vms_model_path=args.vms_model_path,
+        stress_model_path=args.stress_model_path,
         use_golden_features=args.use_golden_features,
+        stress_threshold=args.stress_threshold,
         save_dir=args.save_dir,
     )
