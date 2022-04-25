@@ -125,7 +125,7 @@ if __name__ == '__main__':
     main(
         data=args.data,
         lumen_model_path=args.lumen_model_path,
-        stress_model_path=args.vms_model_path,
+        stress_model_path=args.stress_model_path,
         use_golden_features=args.use_golden_features,
         stress_threshold=args.stress_threshold,
         save_dir=args.save_dir,
