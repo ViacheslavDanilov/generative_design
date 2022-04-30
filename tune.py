@@ -1,9 +1,6 @@
 import os
-import time
-import logging
 import argparse
 from pathlib import Path
-from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -11,9 +8,11 @@ from bayes_opt.event import Events
 from bayes_opt.logger import JSONLogger
 from bayes_opt import BayesianOptimization
 
+from tools.model import Regressor
 from tools.utils import calculate_design_score
 
 
+# TODO: remove later
 def scoring_function_temp(
         lumen: float,
         stress: float,
@@ -34,16 +33,29 @@ def scoring_function(
         stress_threshold: float = 10,
 ) -> float:
 
-    # Run model 1
-    lumen = 0.5             # TODO: get output from model 1
+    # TODO: load models once + pass as a function parameter
+    model_lumen = Regressor(model_path='experiments/LMN_compete_mae_Raw_MinMax_Source_1928_2504')
+    model_stress = Regressor(model_path='experiments/Smax_compete_mae_Robust_Power_Source_2011_2004')
 
-    # Run model 2
-    stress = 2.5            # TODO: get output from model 2
+    _data_point = np.array(
+        [
+            HGT,
+            DIA,
+            ANG,
+            CVT,
+            THK,
+            EM,
+        ]
+    )
+    data_point = _data_point.reshape(1, -1)
+
+    lumen = float(model_lumen(data_point))
+    stress = float(model_stress(data_point))
 
     score = calculate_design_score(
         lumen_abs=lumen,
         stress_abs=stress,
-        stress_threshold=stress_threshold,
+        stress_threshold=stress_threshold,              # TODO: pass as a function parameter
     )
 
     return score
@@ -61,15 +73,9 @@ def main(
         save_dir: str,
 ) -> None:
 
-    # TODO: remove after debugging
-    param_bounds_temp = {
-        'lumen': (2, 7),
-        'stress': (-5, 5),
-    }
-
     optimizer = BayesianOptimization(
-        f=scoring_function_temp,            # FIXME: change to normal version + call with stress_threshold
-        pbounds=param_bounds_temp,          # FIXME: change to normal version
+        f=scoring_function,            # FIXME: call with stress_threshold and model paths
+        pbounds=param_bounds,
         verbose=2,
         random_state=seed,
     )
@@ -85,7 +91,36 @@ def main(
         n_iter=num_steps,
     )
 
-    # TODO: convert tuning.json to tuning.csv and then save it
+    _df = pd.read_json(json_path, lines=True)
+    df = pd.concat(
+        [
+            _df.datetime.apply(pd.Series),
+            _df.params.apply(pd.Series),
+            _df['target'],
+        ],
+        axis=1,
+    )
+    df.rename(
+        columns={
+            'datetime': 'Datetime',
+            'elapsed': 'Elapsed',
+            'delta': 'Delta',
+            'target': 'Score',
+        },
+        inplace=True
+    )
+
+    save_path = Path(json_path).with_suffix('.xlsx')
+    df.to_excel(
+        save_path,
+        sheet_name='Optimization',
+        index=True,
+        index_label='Iteration',
+        startrow=0,
+        startcol=0,
+    )
+
+    os.remove(json_path)
 
 
 if __name__ == '__main__':
@@ -96,7 +131,7 @@ if __name__ == '__main__':
         'ANG': (-30, 30),
         'CVT': (0, 100),
         'THK': (0.1, 1.0),
-        'EM':  (2, 4),          # FIXME: find out the real bounds
+        'EM':  (0.5, 20),
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
