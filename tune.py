@@ -12,17 +12,6 @@ from tools.model import Regressor
 from tools.utils import calculate_design_score
 
 
-# TODO: remove later
-def scoring_function_temp(
-        lumen: float,
-        stress: float,
-) -> float:
-
-    score = lumen ** 2 - (stress + 1) ** 2 + 1
-
-    return score
-
-
 def scoring_function(
         HGT: float,
         DIA: float,
@@ -139,8 +128,8 @@ if __name__ == '__main__':
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
     parser.add_argument('--exploration_strategy', default='ucb', type=str, help='ucb, ei, poi')
-    parser.add_argument('--exploration_points', default=5, type=int)
-    parser.add_argument('--num_steps', default=25, type=int)
+    parser.add_argument('--exploration_points', default=100, type=int)
+    parser.add_argument('--num_steps', default=1000, type=int)
     parser.add_argument('--stress_threshold', default=10, type=float)
     parser.add_argument('--seed', default=11, type=int)
     parser.add_argument('--save_dir', default='calculations', type=str)
