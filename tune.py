@@ -1,4 +1,5 @@
 import os
+import logging
 import argparse
 from pathlib import Path
 
@@ -8,8 +9,18 @@ from bayes_opt.event import Events
 from bayes_opt.logger import JSONLogger
 from bayes_opt import BayesianOptimization
 
-from tools.model import Regressor
 from tools.utils import calculate_design_score
+
+os.makedirs('logs', exist_ok=True)
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%d.%m.%Y %I:%M:%S',
+    filename='logs/{:s}.log'.format(Path(__file__).stem),
+    filemode='w',
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+from tools.model import Regressor
 
 
 def scoring_function(
@@ -62,6 +73,15 @@ def main(
         save_dir: str,
 ) -> None:
 
+    # Log tuning parameters
+    logger.info(f'Lumen model............: {lumen_model_path}')
+    logger.info(f'Stress model...........: {stress_model_path}')
+    logger.info(f'Parameter bounds.......: {param_bounds}')
+    logger.info(f'Exploration strategy...: {exploration_strategy.upper()}')
+    logger.info(f'Exploration points.....: {exploration_points}')
+    logger.info(f'Optimization steps.....: {num_steps}')
+    logger.info(f'Stress threshold.......: {stress_threshold}')
+
     optimizer = BayesianOptimization(
         f=scoring_function,            # FIXME: call with stress_threshold and model paths
         pbounds=param_bounds,
@@ -71,14 +91,24 @@ def main(
 
     os.makedirs(save_dir, exist_ok=True)
     json_path = os.path.join(save_dir, 'tuning.json')
-    logger = JSONLogger(path=json_path)
-    optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+    json_logger = JSONLogger(path=json_path)
+    optimizer.subscribe(Events.OPTIMIZATION_STEP, json_logger)
 
     optimizer.maximize(
         acq=exploration_strategy,
         init_points=exploration_points,
         n_iter=num_steps,
     )
+    best_design = optimizer.max
+
+    logger.info('')
+    logger.info(f"Best score.............: {best_design['target']:.3f}")
+    logger.info(f"Best HGT...............: {best_design['params']['HGT']:.2f}")
+    logger.info(f"Best DIA...............: {best_design['params']['DIA']:.2f}")
+    logger.info(f"Best ANG...............: {best_design['params']['ANG']:.2f}")
+    logger.info(f"Best CVT...............: {best_design['params']['CVT']:.2f}")
+    logger.info(f"Best THK...............: {best_design['params']['THK']:.2f}")
+    logger.info(f"Best EM................: {best_design['params']['EM']:.2f}")
 
     _df = pd.read_json(json_path, lines=True)
     df = pd.concat(
@@ -110,6 +140,8 @@ def main(
     )
 
     os.remove(json_path)
+    logger.info('')
+    logger.info(f'Tuning output..........: {save_path}')
 
 
 if __name__ == '__main__':
