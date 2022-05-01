@@ -43,7 +43,7 @@ def calculate_design_score(
         design_score = np.sqrt(lumen_score * stress_score)
 
     else:
-        design_score = float('nan')
+        design_score = 0
 
     return design_score
 
