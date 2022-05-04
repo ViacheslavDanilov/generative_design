@@ -30,12 +30,10 @@ def scoring_function(
         CVT: float,
         THK: float,
         EM: float,
-        stress_threshold: float = 10,
 ) -> float:
 
-    # TODO: load models once + pass as a function parameter
-    model_lumen = Regressor(model_path='experiments/LMN_compete_mae_Raw_MinMax_Source_1928_2504')
-    model_stress = Regressor(model_path='experiments/Smax_compete_mae_Robust_Power_Source_2011_2004')
+    model_lumen = Regressor(model_path=lumen_model_path)
+    model_stress = Regressor(model_path=stress_model_path)
 
     _data_point = np.array(
         [
@@ -55,20 +53,19 @@ def scoring_function(
     score = calculate_design_score(
         lumen_abs=lumen,
         stress_abs=stress,
-        stress_threshold=stress_threshold,              # TODO: pass as a function parameter
+        stress_threshold=stress_threshold,
     )
 
     return score
 
 
 def main(
-        lumen_model_path: str,
-        stress_model_path: str,
         param_bounds: dict,
-        exploration_strategy: str,
-        exploration_points: int,
+        acquisition_func: str,
         num_steps: int,
-        stress_threshold: float,
+        exploration_points: int,
+        kappa: float,
+        xi: float,
         seed: int,
         save_dir: str,
 ) -> None:
@@ -77,27 +74,34 @@ def main(
     logger.info(f'Lumen model............: {lumen_model_path}')
     logger.info(f'Stress model...........: {stress_model_path}')
     logger.info(f'Parameter bounds.......: {param_bounds}')
-    logger.info(f'Exploration strategy...: {exploration_strategy.upper()}')
+    logger.info(f'Acquisition function...: {acquisition_func.upper()}')
     logger.info(f'Exploration points.....: {exploration_points}')
     logger.info(f'Optimization steps.....: {num_steps}')
+    logger.info(f'Kappa..................: {kappa}')
+    logger.info(f'Xi.....................: {xi}')
     logger.info(f'Stress threshold.......: {stress_threshold}')
 
     optimizer = BayesianOptimization(
-        f=scoring_function,            # FIXME: call with stress_threshold and model paths
+        f=scoring_function,
         pbounds=param_bounds,
         verbose=2,
         random_state=seed,
     )
 
     os.makedirs(save_dir, exist_ok=True)
-    json_path = os.path.join(save_dir, 'tuning.json')
+    json_path = os.path.join(
+        save_dir,
+        f'tuning_{acquisition_func.upper()}_{num_steps}steps_{exploration_points}points.json'
+    )
     json_logger = JSONLogger(path=json_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, json_logger)
 
     optimizer.maximize(
-        acq=exploration_strategy,
+        acq=acquisition_func,
         init_points=exploration_points,
         n_iter=num_steps,
+        kappa=kappa,
+        xi=xi,
     )
     best_design = optimizer.max
 
@@ -159,22 +163,30 @@ if __name__ == '__main__':
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
-    parser.add_argument('--exploration_strategy', default='ucb', type=str, help='ucb, ei, poi')
+    parser.add_argument('--acquisition_func', default='ucb', type=str, help='ucb, ei, poi')
+    parser.add_argument('--num_steps', default=2000, type=int)
     parser.add_argument('--exploration_points', default=100, type=int)
-    parser.add_argument('--num_steps', default=1000, type=int)
+    parser.add_argument('--kappa', default=10, type=float)
+    parser.add_argument('--xi', default=0.1, type=float)
     parser.add_argument('--stress_threshold', default=10, type=float)
     parser.add_argument('--seed', default=11, type=int)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
+    global lumen_model_path
+    global stress_model_path
+    global stress_threshold
+    lumen_model_path = args.lumen_model_path
+    stress_model_path = args.stress_model_path
+    stress_threshold = args.stress_threshold
+
     main(
-        lumen_model_path=args.lumen_model_path,
-        stress_model_path=args.stress_model_path,
         param_bounds=args.param_bounds,
-        exploration_strategy=args.exploration_strategy,
-        exploration_points=args.exploration_points,
+        acquisition_func=args.acquisition_func,
         num_steps=args.num_steps,
-        stress_threshold=args.stress_threshold,
+        exploration_points=args.exploration_points,
+        kappa=args.kappa,
+        xi=args.xi,
         seed=args.seed,
         save_dir=args.save_dir,
     )
