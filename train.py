@@ -1,5 +1,6 @@
 import os
 import time
+import copy
 import logging
 import warnings
 import argparse
@@ -14,7 +15,6 @@ import pandas as pd
 from math import sqrt
 from sklearn.metrics import *
 from scipy.stats import pearsonr
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
 from tools.utils import get_golden_features, calc_mape
@@ -36,7 +36,7 @@ def main(
     mode: str,
     target: str,
     features: List[str],
-    test_size: float,
+    k_folds: int,
     golden_features_path: str,
     feature_scale: str,
     target_scale: str,
@@ -101,22 +101,19 @@ def main(
     y = output_scaler.transform(y) if target_scale != 'Raw' else y
 
     validation_strategy = {
-        'validation_type': 'custom',
+        'validation_type': 'kfold',
+        'k_folds': k_folds,
+        'shuffle': True,
+        'stratify': True,
+        'random_seed': seed,
     }
-    train_idx, val_idx = train_test_split(
-        np.arange(len(X)),
-        test_size=test_size,
-        random_state=seed,
-        shuffle=True,
-    )
-    cv = [(train_idx, val_idx)]
 
     # Log main parameters
     logger.info(f'Data path..........: {data_path}')
     logger.info(f'Target.............: {target}')
     logger.info(f'Scale features.....: {feature_scale}')
     logger.info(f'Scale target.......: {target_scale}')
-    logger.info(f'Train/Val ratio....: {100*(1-test_size):.0f}/{100*test_size:.0f}')
+    logger.info(f'CV folds...........: {k_folds}')
     logger.info(f'Mode...............: {mode}')
     logger.info(f'Metric.............: {metric}')
     logger.info(f'Algorithms.........: {algorithms}')
@@ -140,7 +137,6 @@ def main(
     automl.fit(
         X=X,
         y=y.squeeze(),
-        cv=cv,
     )
     automl.report()
 
@@ -169,65 +165,122 @@ def main(
         y = output_scaler.inverse_transform(y)
         y_pred = output_scaler.inverse_transform(y_pred)
 
+    # Load indices
+    folds_dir = os.path.join(experiment_path, 'folds')
+    train_idx = {}
+    val_idx = {}
+    for fold_idx in range(k_folds):
+        _train_indices_path = os.path.join(folds_dir, f'fold_{fold_idx}_train_indices.npy')
+        _val_indices_path = os.path.join(folds_dir, f'fold_{fold_idx}_validation_indices.npy')
+        train_idx[f'fold {fold_idx+1}'] = np.load(_train_indices_path)
+        val_idx[f'fold {fold_idx+1}'] = np.load(_val_indices_path)
+
     if np.any(np.isnan(y_pred)):
         nan_mask = np.isnan(y_pred).squeeze()
         nan_idx = np.where(nan_mask == True)[0]
-        _train_idx = [i for i in train_idx if i not in nan_idx]
-        train_idx = np.array(_train_idx)
-        _val_idx = [i for i in val_idx if i not in nan_idx]
-        val_idx = np.array(_val_idx)
+        for fold_idx in range(k_folds):
+            _train_idx = [i for i in train_idx[f'fold {fold_idx+1}'] if i not in nan_idx]
+            train_idx[f'fold {fold_idx+1}'] = np.array(_train_idx)
+            _val_idx = [i for i in val_idx[f'fold {fold_idx+1}'] if i not in nan_idx]
+            val_idx[f'fold {fold_idx+1}'] = np.array(_val_idx)
         logger.info(f'Found and dropped {nan_mask.sum()} NaNs in predictions')
 
     # Compute all metrics
-    mae_train = mean_absolute_error(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
-    mae_val = mean_absolute_error(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
+    metrics_train = {
+        'MAPE': {},
+        'MAE': {},
+        'RMSE': {},
+        'MSE': {},
+        'R^2': {},
+        'Pearson': {},
+    }
+    metrics_val = copy.deepcopy(metrics_train)
+    for fold_idx in range(k_folds):
 
-    mse_train = mean_squared_error(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
-    mse_val = mean_squared_error(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
+        mape_train = calc_mape(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+        )
+        mape_val = calc_mape(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+        )
+        metrics_train['MAPE'][f'Fold {fold_idx+1}'] = mape_train
+        metrics_val['MAPE'][f'Fold {fold_idx+1}'] = mape_val
 
-    rmse_train = sqrt(mean_squared_error(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx)))
-    rmse_val = sqrt(mean_squared_error(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx)))
+        mae_train = mean_absolute_error(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+        )
+        mae_val = mean_absolute_error(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+        )
+        metrics_train['MAE'][f'Fold {fold_idx+1}'] = mae_train
+        metrics_val['MAE'][f'Fold {fold_idx+1}'] = mae_val
 
-    r2_train = r2_score(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
-    r2_val = r2_score(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
+        mse_train = mean_squared_error(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+        )
+        mse_val = mean_squared_error(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+        )
+        metrics_train['MSE'][f'Fold {fold_idx+1}'] = mse_train
+        metrics_val['MSE'][f'Fold {fold_idx+1}'] = mse_val
 
-    mape_train = calc_mape(y_true=np.take(y, train_idx), y_pred=np.take(y_pred, train_idx))
-    mape_val = calc_mape(y_true=np.take(y, val_idx), y_pred=np.take(y_pred, val_idx))
+        rmse_train = sqrt(mean_squared_error(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}']))
+        )
+        rmse_val = sqrt(mean_squared_error(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}']))
+        )
+        metrics_train['RMSE'][f'Fold {fold_idx+1}'] = rmse_train
+        metrics_val['RMSE'][f'Fold {fold_idx+1}'] = rmse_val
 
-    pearson_train, _ = pearsonr(x=np.take(y, train_idx).squeeze(), y=np.take(y_pred, train_idx).squeeze())
-    pearson_val, _ = pearsonr(x=np.take(y, val_idx).squeeze(), y=np.take(y_pred, val_idx).squeeze())
+        r2_train = r2_score(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+        )
+        r2_val = r2_score(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+        )
+        metrics_train['R^2'][f'Fold {fold_idx+1}'] = r2_train
+        metrics_val['R^2'][f'Fold {fold_idx+1}'] = r2_val
 
-    logger.info('')
-    logger.info(f'Metrics............: Train / Val')
-    logger.info(f'MAPE...............: {mape_train:.2} / {mape_val:.2}')
-    logger.info(f'MAE................: {mae_train:.3f} / {mae_val:.3f}')
-    logger.info(f'RMSE...............: {rmse_train:.3f} / {rmse_val:.3f}')
-    logger.info(f'MSE................: {mse_train:.3f} / {mse_val:.3f}')
-    logger.info(f'R2.................: {r2_train:.3f} / {r2_val:.3f}')
-    logger.info(f'Pearson............: {pearson_train:.2%} / {pearson_val:.2%}')
+        pearson_train, _ = pearsonr(
+            x=np.take(y, train_idx[f'fold {fold_idx+1}']).squeeze(),
+            y=np.take(y_pred, train_idx[f'fold {fold_idx+1}']).squeeze()
+        )
+        pearson_val, _ = pearsonr(
+            x=np.take(y, val_idx[f'fold {fold_idx+1}']).squeeze(),
+            y=np.take(y_pred, val_idx[f'fold {fold_idx+1}']).squeeze()
+        )
+        metrics_train['Pearson'][f'Fold {fold_idx+1}'] = pearson_train
+        metrics_val['Pearson'][f'Fold {fold_idx+1}'] = pearson_val
 
     # Save metrics dataframe
-    metrics = {
-        'Metric': ['MAPE', 'MAE', 'RMSE', 'MSE', 'R2', 'Pearson'],
-        'Training': [mape_train, mae_train, rmse_train, mse_train, r2_train, pearson_train],
-        'Validation': [mape_val, mae_val, rmse_val, mse_val, r2_val, pearson_val],
-    }
-    df_metrics = pd.DataFrame(metrics)
-    df_metrics.to_excel(
-        f'{experiment_path}/metrics.xlsx',
-        sheet_name='Metrics',
-        index=True,
-        index_label='ID',
-        startrow=0,
-        startcol=0,
-    )
+    df_metrics_train = pd.DataFrame(metrics_train)
+    df_metrics_val = pd.DataFrame(metrics_val)
+    writer = pd.ExcelWriter(f'{experiment_path}/metrics.xlsx', engine='xlsxwriter')
+    df_metrics_train.to_excel(writer, sheet_name='Train')
+    df_metrics_val.to_excel(writer, sheet_name='Val')
+    writer.save()
 
+    # Save predictions
     data = np.hstack([X, y, y_pred])
     df_out = pd.DataFrame(data, columns=[*features, f'{target}_gt', f'{target}_pred'])
     df_out['Residual'] = df_out['{:s}_gt'.format(target)] - df_out['{:s}_pred'.format(target)]
     df_out['Error'] = df_out['Residual'].abs()
-    df_out['Subset'] = 'Training'
-    df_out.loc[val_idx, 'Subset'] = 'Validation'
+
+    for fold_idx in range(k_folds):
+        df_out[f'Fold {fold_idx+1}'] = 'Training'
+        df_out.loc[val_idx[f'fold {fold_idx+1}'], f'Fold {fold_idx+1}'] = 'Validation'
+
     df_out.to_excel(
         f'{experiment_path}/predictions.xlsx',
         sheet_name='Predictions',
@@ -237,6 +290,14 @@ def main(
         startcol=0,
     )
 
+    logger.info('')
+    logger.info(f'Metrics............: Train / Val')
+    logger.info(f"MAPE...............: {df_metrics_train['MAPE'].mean():.3} / {df_metrics_val['MAPE'].mean():.3}")
+    logger.info(f"MAE................: {df_metrics_train['MAE'].mean():.3f} / {df_metrics_val['MAE'].mean():.3f}")
+    logger.info(f"MSE................: {df_metrics_train['MSE'].mean():.3f} / {df_metrics_val['MSE'].mean():.3f}")
+    logger.info(f"RMSE...............: {df_metrics_train['RMSE'].mean():.3f} / {df_metrics_val['RMSE'].mean():.3f}")
+    logger.info(f"R^2................: {df_metrics_train['R^2'].mean():.3f} / {df_metrics_val['R^2'].mean():.3f}")
+    logger.info(f"Pearson............: {df_metrics_train['Pearson'].mean():.2%} / {df_metrics_val['Pearson'].mean():.2%}")
     logger.info('')
     logger.info('Model training complete')
 
@@ -273,7 +334,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='Explain', type=str)
     parser.add_argument('--target', default='Smax', type=str, help='LMN, VMS, Smax, LEmax')
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
-    parser.add_argument('--test_size', default=0.2, type=float, help='size of the test split')
+    parser.add_argument('--k_folds', default=10, type=int, help='Number of cross-validation folds')
     parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='Robust', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Power', type=str, help='Raw, MinMax, Standard, Robust, Power')
@@ -288,7 +349,7 @@ if __name__ == '__main__':
         mode=args.mode,
         target=args.target,
         features=args.features,
-        test_size=args.test_size,
+        k_folds=args.k_folds,
         golden_features_path=args.golden_features_path,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
