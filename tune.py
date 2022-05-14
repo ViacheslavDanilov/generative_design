@@ -1,4 +1,5 @@
 import os
+import timeit
 import logging
 import argparse
 from pathlib import Path
@@ -32,6 +33,13 @@ def scoring_function(
         THK: float,
         EM: float,
 ) -> float:
+
+    global iteration
+    global lumen_model_path
+    global stress_model_path
+    global stress_threshold
+
+    start = timeit.default_timer()
     model_lumen = Regressor(model_path=lumen_model_path)
     model_stress = Regressor(model_path=stress_model_path)
 
@@ -55,6 +63,16 @@ def scoring_function(
         stress_abs=stress,
         stress_threshold=stress_threshold,
     )
+    stop = timeit.default_timer()
+
+    log_string = f'Iteration: {(iteration + 1):04d} - ' \
+                 f'Elapsed: {int(stop - start):03d} - ' \
+                 f'Lumen: {lumen:.03f} - ' \
+                 f'Stress: {stress:.03f} - ' \
+                 f'Score: {score:.03f}'
+    logger.info(log_string)
+    print(log_string)
+    iteration += 1
 
     return score
 
@@ -82,6 +100,7 @@ def main(
     logger.info(f'Kappa..................: {kappa}')
     logger.info(f'Xi.....................: {xi}')
     logger.info(f'Stress threshold.......: {stress_threshold}')
+    logger.info('')
 
     if use_sdr:
         bounds_transformer = SDRTransformer(
@@ -182,7 +201,7 @@ if __name__ == '__main__':
     parser.add_argument('--sdr_zoom', default=0.99, type=float)
     parser.add_argument('--acquisition_func', default='ucb', type=str, help='ucb, ei, poi')
     parser.add_argument('--num_steps', default=2000, type=int)
-    parser.add_argument('--exploration_points', default=100, type=int)
+    parser.add_argument('--exploration_points', default=200, type=int)
     parser.add_argument('--kappa', default=10, type=float)
     parser.add_argument('--xi', default=0.1, type=float)
     parser.add_argument('--stress_threshold', default=10, type=float)
@@ -190,9 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_dir', default='calculations/tuning', type=str)
     args = parser.parse_args()
 
-    global lumen_model_path
-    global stress_model_path
-    global stress_threshold
+    iteration = 0
     lumen_model_path = args.lumen_model_path
     stress_model_path = args.stress_model_path
     stress_threshold = args.stress_threshold
