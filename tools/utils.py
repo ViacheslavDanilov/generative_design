@@ -34,13 +34,11 @@ def calculate_design_score(
         lumen_score = calculate_lumen_score(
             lumen_abs=lumen_abs,
         )
-        lumen_score = 0 if lumen_score < 0 else lumen_score
 
         stress_score = calculate_stress_score(
             stress_abs=stress_abs,
             stress_threshold=stress_threshold,
         )
-        stress_score = 0 if stress_score < 0 else stress_score
 
         design_score = np.sqrt(lumen_score * stress_score)
 

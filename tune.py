@@ -56,7 +56,10 @@ def scoring_function(
     data_point = _data_point.reshape(1, -1)
 
     lumen = float(model_lumen(data_point))
+    lumen = 0 if lumen < 0 else lumen
+
     stress = float(model_stress(data_point))
+    stress = 0 if stress < 0 else stress
 
     score = calculate_design_score(
         lumen_abs=lumen,
@@ -67,9 +70,15 @@ def scoring_function(
 
     log_string = f'Iteration: {(iteration + 1):04d} - ' \
                  f'Elapsed: {int(stop - start):03d} - ' \
-                 f'Lumen: {lumen:.03f} - ' \
-                 f'Stress: {stress:.03f} - ' \
-                 f'Score: {score:.03f}'
+                 f'HGT: {HGT:4.1f} - ' \
+                 f'DIA: {DIA:4.1f} - ' \
+                 f'ANG: {ANG:5.1f} - ' \
+                 f'CVT: {CVT:4.1f} - ' \
+                 f'THK: {THK:4.2f} - ' \
+                 f'EM:  {EM:4.1f} - ' \
+                 f'Lumen: {lumen:4.2f} - ' \
+                 f'Stress: {stress:5.2f} - ' \
+                 f'Score: {score:5.3f}'
     logger.info(log_string)
     print(log_string)
     iteration += 1
