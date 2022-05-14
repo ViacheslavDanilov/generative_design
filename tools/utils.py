@@ -7,7 +7,7 @@ import numpy as np
 def calculate_lumen_score(
         lumen_abs: float,
 ) -> float:
-    lumen_score = 2 / (1 + np.exp((1 - lumen_abs) * 10))
+    lumen_score = lumen_abs
     return lumen_score
 
 
