@@ -89,6 +89,9 @@ def scoring_function(
 def main(
         param_bounds: dict,
         use_sdr: bool,
+        sdr_shrinkage: float,
+        sdr_pan: float,
+        sdr_zoom: float,
         acquisition_func: str,
         num_steps: int,
         exploration_points: int,
@@ -103,6 +106,9 @@ def main(
     logger.info(f'Stress model...........: {stress_model_path}')
     logger.info(f'Parameter bounds.......: {param_bounds}')
     logger.info(f'Use SDR transformer....: {use_sdr}')
+    logger.info(f'SDR shrinkage..........: {sdr_shrinkage}')
+    logger.info(f'SDR pan................: {sdr_pan}')
+    logger.info(f'SDR zoom...............: {sdr_zoom}')
     logger.info(f'Acquisition function...: {acquisition_func.upper()}')
     logger.info(f'Exploration points.....: {exploration_points}')
     logger.info(f'Optimization steps.....: {num_steps}')
@@ -113,9 +119,9 @@ def main(
 
     if use_sdr:
         bounds_transformer = SDRTransformer(
-            gamma_osc=0.95,
-            gamma_pan=1.0,
-            eta=0.99,
+            gamma_osc=sdr_shrinkage,
+            gamma_pan=sdr_pan,
+            eta=sdr_zoom,
         )
         json_suffix = '_SDR'
     else:
@@ -228,6 +234,9 @@ if __name__ == '__main__':
     main(
         param_bounds=args.param_bounds,
         use_sdr=args.use_sdr,
+        sdr_shrinkage=args.sdr_shrinkage,
+        sdr_pan=args.sdr_pan,
+        sdr_zoom=args.sdr_zoom,
         acquisition_func=args.acquisition_func,
         num_steps=args.num_steps,
         exploration_points=args.exploration_points,
