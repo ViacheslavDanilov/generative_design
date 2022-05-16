@@ -191,13 +191,15 @@ def main(
 
 
 if __name__ == '__main__':
+    # TODO: unite "stress_threshold" (or use UTS name) with other BOUNDS
     BOUNDS = {
-        'HGT': (10, 25),
-        'DIA': (15, 40),
-        'ANG': (-30, 30),
-        'CVT': (0, 100),
-        'THK': (0.1, 1.0),
-        'EM':  (0.5, 20),
+        'HGT': (10, 25),    # valve height
+        'DIA': (28),        # diameter for 29mm valve size
+        'ANG': (-30, 30),   # free edge angle in wide range
+        'CVT': (0, 100),    # leaflet curvature in wide range
+        'THK': (0.1, 1.0),  # 0.1 - 1.0 Leaflet thickness
+        'EM':  (3.1),       # Stress at 50% Elongation for Formlabs Flexible 80A Resin = 3.1 MPa
+        # 'UTS': (8.9)      # "stress_threshold" or UTS for Formlabs Flexible 80A Resin = 8.9 MPa
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
