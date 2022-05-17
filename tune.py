@@ -31,13 +31,13 @@ def scoring_function(
         ANG: float,
         CVT: float,
         THK: float,
-        EM: float,
+        ELM: float,
+        UTS: float,
 ) -> float:
 
     global iteration
     global lumen_model_path
     global stress_model_path
-    global stress_threshold
 
     start = timeit.default_timer()
     model_lumen = Regressor(model_path=lumen_model_path)
@@ -50,7 +50,7 @@ def scoring_function(
             ANG,
             CVT,
             THK,
-            EM,
+            ELM,
         ]
     )
     data_point = _data_point.reshape(1, -1)
@@ -64,7 +64,7 @@ def scoring_function(
     score = calculate_design_score(
         lumen_abs=lumen,
         stress_abs=stress,
-        stress_threshold=stress_threshold,
+        uts=UTS,
     )
     stop = timeit.default_timer()
 
@@ -75,7 +75,8 @@ def scoring_function(
                  f'ANG: {ANG:5.1f} - ' \
                  f'CVT: {CVT:4.1f} - ' \
                  f'THK: {THK:4.2f} - ' \
-                 f'EM:  {EM:4.1f} - ' \
+                 f'ELM: {ELM:4.1f} - ' \
+                 f'UTS: {UTS:4.1f} - ' \
                  f'Lumen: {lumen:4.2f} - ' \
                  f'Stress: {stress:5.2f} - ' \
                  f'Score: {score:5.3f}'
@@ -114,7 +115,6 @@ def main(
     logger.info(f'Optimization steps.....: {num_steps}')
     logger.info(f'Kappa..................: {kappa}')
     logger.info(f'Xi.....................: {xi}')
-    logger.info(f'Stress threshold.......: {stress_threshold}')
     logger.info('')
 
     if use_sdr:
@@ -160,7 +160,8 @@ def main(
     logger.info(f"Best ANG...............: {best_design['params']['ANG']:.2f}")
     logger.info(f"Best CVT...............: {best_design['params']['CVT']:.2f}")
     logger.info(f"Best THK...............: {best_design['params']['THK']:.2f}")
-    logger.info(f"Best EM................: {best_design['params']['EM']:.2f}")
+    logger.info(f"Best ELM...............: {best_design['params']['ELM']:.2f}")
+    logger.info(f"Best UTS...............: {best_design['params']['UTS']:.2f}")
 
     _df = pd.read_json(json_path, lines=True)
     df = pd.concat(
@@ -197,15 +198,15 @@ def main(
 
 
 if __name__ == '__main__':
-    # TODO: unite "stress_threshold" (or use UTS name) with other BOUNDS
+
     BOUNDS = {
-        'HGT': (10, 25),    # valve height
-        'DIA': (28),        # diameter for 29mm valve size
-        'ANG': (-30, 30),   # free edge angle in wide range
-        'CVT': (0, 100),    # leaflet curvature in wide range
-        'THK': (0.1, 1.0),  # 0.1 - 1.0 Leaflet thickness
-        'EM':  (3.1),       # Stress at 50% Elongation for Formlabs Flexible 80A Resin = 3.1 MPa
-        # 'UTS': (8.9)      # "stress_threshold" or UTS for Formlabs Flexible 80A Resin = 8.9 MPa
+        'HGT': (10, 25),            # valve height
+        'DIA': (28, 28),            # diameter for 29 mm valve size (28 + 2*thickness)
+        'ANG': (-30, 30),           # free edge angle
+        'CVT': (0, 100),            # leaflet curvature
+        'THK': (0.1, 1.0),          # leaflet thickness
+        'ELM': (3.1, 3.1),          # stress at 50% elongation for Flexible 80A Resin = 3.1 MPa
+        'UTS': (8.9, 8.9),          # ultimate tensile strength for Flexible 80A Resin = 8.9 MPa
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
@@ -221,7 +222,6 @@ if __name__ == '__main__':
     parser.add_argument('--exploration_points', default=200, type=int)
     parser.add_argument('--kappa', default=10, type=float)
     parser.add_argument('--xi', default=0.1, type=float)
-    parser.add_argument('--stress_threshold', default=10, type=float)
     parser.add_argument('--seed', default=11, type=int)
     parser.add_argument('--save_dir', default='calculations/tuning', type=str)
     args = parser.parse_args()
@@ -229,7 +229,6 @@ if __name__ == '__main__':
     iteration = 0
     lumen_model_path = args.lumen_model_path
     stress_model_path = args.stress_model_path
-    stress_threshold = args.stress_threshold
 
     main(
         param_bounds=args.param_bounds,
