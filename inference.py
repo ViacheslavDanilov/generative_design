@@ -27,7 +27,7 @@ def main(
     lumen_model_path: str,
     stress_model_path: str,
     use_golden_features: bool,
-    stress_threshold: float,
+    uts: float,
     save_dir: str,
 ) -> None:
 
@@ -92,7 +92,7 @@ def main(
         score[idx] = calculate_design_score(
             lumen_abs=_lumen,
             stress_abs=_stress,
-            stress_threshold=stress_threshold,
+            uts=uts,
         )
 
     data = np.hstack([data, lumen, stress, score])
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--use_golden_features', action='store_true')
-    parser.add_argument('--stress_threshold', default=10, type=float)
+    parser.add_argument('--uts', default=10, type=float)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
@@ -127,6 +127,6 @@ if __name__ == '__main__':
         lumen_model_path=args.lumen_model_path,
         stress_model_path=args.stress_model_path,
         use_golden_features=args.use_golden_features,
-        stress_threshold=args.stress_threshold,
+        uts=args.uts,
         save_dir=args.save_dir,
     )
