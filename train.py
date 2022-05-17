@@ -326,7 +326,7 @@ if __name__ == '__main__':
         'ANG',
         'CVT',
         'THK',
-        'EM',
+        'ELM',
     ]
 
     parser = argparse.ArgumentParser(description='Dataset conversion')
