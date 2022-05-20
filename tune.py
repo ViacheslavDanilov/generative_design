@@ -1,13 +1,13 @@
 import os
+import json
 import timeit
 import logging
 import argparse
 from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from bayes_opt.event import Events
-from bayes_opt.logger import JSONLogger
 from bayes_opt import BayesianOptimization
 from bayes_opt import SequentialDomainReductionTransformer as SDRTransformer
 
@@ -25,19 +25,35 @@ logger = logging.getLogger(__name__)
 from tools.model import Regressor
 
 
+def get_material_idx(
+        MTL: float,
+        materials: dict,
+) -> int:
+    idx = int(MTL - 1e-10) if MTL == len(materials) + 1 else int(MTL)
+    return idx
+
+
 def scoring_function(
         HGT: float,
         DIA: float,
         ANG: float,
         CVT: float,
         THK: float,
-        ELM: float,
-        UTS: float,
+        MTL: float,
 ) -> float:
 
     global iteration
+    global materials
     global lumen_model_path
     global stress_model_path
+
+    idx = get_material_idx(
+        MTL=MTL,
+        materials=materials,
+    )
+    assert type(idx) == int, 'MTL index must be an integer value'
+    ELM = materials[f'material_{idx}']['ELM']
+    UTS = materials[f'material_{idx}']['UTS']
 
     start = timeit.default_timer()
     model_lumen = Regressor(model_path=lumen_model_path)
@@ -68,6 +84,7 @@ def scoring_function(
     )
     stop = timeit.default_timer()
 
+    # Reporting
     log_string = f'Iteration: {(iteration + 1):04d} - ' \
                  f'Elapsed: {int(stop - start):03d} - ' \
                  f'HGT: {HGT:4.1f} - ' \
@@ -77,11 +94,36 @@ def scoring_function(
                  f'THK: {THK:4.2f} - ' \
                  f'ELM: {ELM:4.1f} - ' \
                  f'UTS: {UTS:4.1f} - ' \
+                 f'MTL: {idx:d} - ' \
                  f'Lumen: {lumen:4.2f} - ' \
                  f'Stress: {stress:5.2f} - ' \
                  f'Score: {score:5.3f}'
     logger.info(log_string)
-    print(log_string)
+
+    # Logging
+    now = datetime.now()
+    log_params = {
+        'Datetime': now.strftime('%d-%m-%Y %H:%M:%S'),
+        'Iteration': iteration + 1,
+        'Elapsed': stop - start,
+        'HGT': HGT,
+        'DIA': DIA,
+        'ANG': ANG,
+        'CVT': CVT,
+        'THK': THK,
+        'ELM': ELM,
+        'UTS': UTS,
+        'MTL': idx,
+        'Lumen': lumen,
+        'Stress': stress,
+        'Score': score,
+    }
+
+    with open(json_path, mode='a', encoding='utf-8') as outfile:
+        outfile.write(json.dumps(log_params))
+        outfile.write("\n")
+        outfile.close()
+
     iteration += 1
 
     return score
@@ -137,12 +179,17 @@ def main(
     )
 
     os.makedirs(save_dir, exist_ok=True)
+    global json_path
     json_path = os.path.join(
         save_dir,
         f'tuning_{acquisition_func.upper()}_{num_steps}steps_{exploration_points}points{json_suffix}.json'
     )
-    json_logger = JSONLogger(path=json_path)
-    optimizer.subscribe(Events.OPTIMIZATION_STEP, json_logger)
+
+    try:
+        os.remove(json_path)
+    except OSError:
+        pass
+    open(json_path, 'w')
 
     optimizer.maximize(
         acq=acquisition_func,
@@ -153,46 +200,30 @@ def main(
     )
     best_design = optimizer.max
 
+    idx = get_material_idx(
+        MTL=best_design['params']['MTL'],
+        materials=materials,
+    )
+
     logger.info('')
-    logger.info(f"Best score.............: {best_design['target']:.3f}")
-    logger.info(f"Best HGT...............: {best_design['params']['HGT']:.2f}")
-    logger.info(f"Best DIA...............: {best_design['params']['DIA']:.2f}")
-    logger.info(f"Best ANG...............: {best_design['params']['ANG']:.2f}")
-    logger.info(f"Best CVT...............: {best_design['params']['CVT']:.2f}")
-    logger.info(f"Best THK...............: {best_design['params']['THK']:.2f}")
-    logger.info(f"Best ELM...............: {best_design['params']['ELM']:.2f}")
-    logger.info(f"Best UTS...............: {best_design['params']['UTS']:.2f}")
+    logger.info(f'Best design')
+    logger.info(f"Score..................: {best_design['target']:.3f}")
+    logger.info(f"HGT....................: {best_design['params']['HGT']:.2f}")
+    logger.info(f"DIA....................: {best_design['params']['DIA']:.2f}")
+    logger.info(f"ANG....................: {best_design['params']['ANG']:.2f}")
+    logger.info(f"CVT....................: {best_design['params']['CVT']:.2f}")
+    logger.info(f"THK....................: {best_design['params']['THK']:.2f}")
+    logger.info(f"ELM....................: {materials[f'material_{idx}']['ELM']:.2f}")
+    logger.info(f"UTS....................: {materials[f'material_{idx}']['UTS']:.2f}")
+    logger.info(f"MTL....................: {idx:d}")
 
-    _df = pd.read_json(json_path, lines=True)
-    df = pd.concat(
-        [
-            _df.datetime.apply(pd.Series),
-            _df.params.apply(pd.Series),
-            _df['target'],
-        ],
-        axis=1,
-    )
-    df.rename(
-        columns={
-            'datetime': 'Datetime',
-            'elapsed': 'Elapsed',
-            'delta': 'Delta',
-            'target': 'Score',
-        },
-        inplace=True
-    )
-
+    df = pd.read_json(json_path, lines=True)
     save_path = Path(json_path).with_suffix('.xlsx')
     df.to_excel(
         save_path,
         sheet_name='Optimization',
-        index=True,
-        index_label='Iteration',
-        startrow=0,
-        startcol=0,
+        index=False,
     )
-
-    os.remove(json_path)
     logger.info('')
     logger.info(f'Tuning output..........: {save_path}')
 
@@ -205,8 +236,7 @@ if __name__ == '__main__':
         'ANG': (-30, 30),           # free edge angle
         'CVT': (0, 100),            # leaflet curvature
         'THK': (0.1, 1.0),          # leaflet thickness
-        'ELM': (3.1, 3.1),          # stress at 50% elongation for Flexible 80A Resin = 3.1 MPa
-        'UTS': (8.9, 8.9),          # ultimate tensile strength for Flexible 80A Resin = 8.9 MPa
+        'MTL': (1.0, 8.0),          # material index
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
@@ -219,7 +249,7 @@ if __name__ == '__main__':
     parser.add_argument('--sdr_zoom', default=0.99, type=float)
     parser.add_argument('--acquisition_func', default='ucb', type=str, help='ucb, ei, poi')
     parser.add_argument('--num_steps', default=2000, type=int)
-    parser.add_argument('--exploration_points', default=200, type=int)
+    parser.add_argument('--exploration_points', default=250, type=int)
     parser.add_argument('--kappa', default=10, type=float)
     parser.add_argument('--xi', default=0.1, type=float)
     parser.add_argument('--seed', default=11, type=int)
@@ -227,6 +257,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     iteration = 0
+    f = open('dataset/materials.json', 'r')
+    materials = json.loads(f.read())
     lumen_model_path = args.lumen_model_path
     stress_model_path = args.stress_model_path
 
