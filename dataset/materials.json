@@ -1,0 +1,30 @@
+{
+  "material_1": {
+    "ELM": 1.1,
+    "UTS": 12.72
+  },
+  "material_2": {
+    "ELM": 10.65,
+    "UTS": 26.51
+  },
+  "material_3": {
+    "ELM": 1.02,
+    "UTS": 11.84
+  },
+  "material_4": {
+    "ELM": 0.63,
+    "UTS": 10.71
+  },
+  "material_5": {
+    "ELM": 6.28,
+    "UTS": 15.07
+  },
+  "material_6": {
+    "ELM": 0.81,
+    "UTS": 10.62
+  },
+  "material_7": {
+    "ELM": 1.07,
+    "UTS": 4.56
+  }
+}
