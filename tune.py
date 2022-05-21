@@ -86,7 +86,7 @@ def scoring_function(
 
     # Reporting
     log_string = f'Iteration: {(iteration + 1):04d} - ' \
-                 f'Elapsed: {int(stop - start):03d} - ' \
+                 f'Elapsed: {int(stop - start):3d} - ' \
                  f'HGT: {HGT:4.1f} - ' \
                  f'DIA: {DIA:4.1f} - ' \
                  f'ANG: {ANG:5.1f} - ' \
@@ -232,11 +232,11 @@ if __name__ == '__main__':
 
     BOUNDS = {
         'HGT': (10, 25),            # valve height
-        'DIA': (28, 28),            # diameter for 29 mm valve size (28 + 2*thickness)
+        'DIA': (19, 33),            # valve diameter
         'ANG': (-30, 30),           # free edge angle
         'CVT': (0, 100),            # leaflet curvature
         'THK': (0.1, 1.0),          # leaflet thickness
-        'MTL': (1.0, 8.0),          # material index
+        'MTL': (1, 8),              # material index
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
