@@ -7,4 +7,8 @@ scikit-learn==1.0.2
 scipy==1.7.3
 seaborn==0.11.2
 tqdm==4.62.3
+ipython==8.0.1
 mljar-supervised==0.11.1
+bayesian-optimization==1.2.0
+xlsxwriter==3.0.3
+optuna==2.10.0

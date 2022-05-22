@@ -1,4 +1,7 @@
 import os
+from warnings import simplefilter
+simplefilter('ignore', UserWarning)
+simplefilter('ignore', FutureWarning)
 
 import numpy as np
 from pickle import load

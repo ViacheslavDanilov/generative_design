@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 from tools.model import Regressor
 
 
-def main(
+def predict(
     data: Union[List[float], np.ndarray, pd.DataFrame, str],
     lumen_model_path: str,
     stress_model_path: str,
+    features: List[str],
     use_golden_features: bool,
-    stress_threshold: float,
+    uts: float,
     save_dir: str,
 ) -> None:
 
@@ -36,20 +37,17 @@ def main(
             and Path(data).suffix == '.xlsx'
     ):
         data = pd.read_excel(data)
-        features = list(data.columns)
-        data = data.values
+        data = data[features].values
     elif isinstance(data, np.ndarray):
-        features = list(map(lambda x: f'F{x}', range(data.shape[1])))
         pass
     elif isinstance(data, pd.DataFrame):
         data = data.values
-        features = list(map(lambda x: f'F{x}', range(data.shape[1])))
     elif isinstance(data, list):
         data = np.array(data, dtype=float)
-        features = list(map(lambda x: f'F{x}', range(data.shape[1])))
-        data = np.expand_dims(data, axis=0) if len(data.shape) == 1 else data
     else:
         raise ValueError('Unsupported data type')
+
+    data = np.expand_dims(data, axis=0) if len(data.shape) == 1 else data
 
     logger.info('')
     logger.info(f'Model (Lumen).............: {lumen_model_path}')
@@ -84,15 +82,17 @@ def main(
         )
         stress = model_stress(data)
         end = time.time()
-        logger.info(f'Stress prediction took.......: {end - start:.0f} seconds')
+        logger.info(f'Stress prediction took....: {end - start:.0f} seconds')
 
     score = np.empty((data.shape[0], 1))
     score[:] = np.NaN
-    for idx, (_lumen, _stress) in enumerate(zip(lumen.squeeze(), stress.squeeze())):
+    for idx, (_lumen, _stress) in enumerate(zip(lumen, stress)):
+        _lumen = float(_lumen.squeeze())
+        _stress = float(_stress.squeeze())
         score[idx] = calculate_design_score(
             lumen_abs=_lumen,
             stress_abs=_stress,
-            stress_threshold=stress_threshold,
+            uts=uts,
         )
 
     data = np.hstack([data, lumen, stress, score])
@@ -113,20 +113,31 @@ def main(
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Dataset conversion')
-    parser.add_argument('--data', default='dataset/data_test.xlsx')
+    FEATURES = [
+        'HGT',
+        'DIA',
+        'ANG',
+        'CVT',
+        'THK',
+        'ELM',
+    ]
+
+    parser = argparse.ArgumentParser(description='Model inference')
+    parser.add_argument('--data', default='dataset/test.xlsx', nargs='+')
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
+    parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--use_golden_features', action='store_true')
-    parser.add_argument('--stress_threshold', default=10, type=float)
+    parser.add_argument('--uts', default=8.9, type=float)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
 
-    main(
+    predict(
         data=args.data,
         lumen_model_path=args.lumen_model_path,
         stress_model_path=args.stress_model_path,
+        features=args.features,
         use_golden_features=args.use_golden_features,
-        stress_threshold=args.stress_threshold,
+        uts=args.uts,
         save_dir=args.save_dir,
     )

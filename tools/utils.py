@@ -7,15 +7,15 @@ import numpy as np
 def calculate_lumen_score(
         lumen_abs: float,
 ) -> float:
-    lumen_score = 2 / (1 + np.exp((1 - lumen_abs) * 10))
+    lumen_score = lumen_abs
     return lumen_score
 
 
 def calculate_stress_score(
         stress_abs: float,
-        stress_threshold: float = 10,
+        uts: float = 8.9,
 ) -> float:
-    stress_rel = stress_abs / stress_threshold
+    stress_rel = stress_abs / uts
     stress_score = 1 - stress_rel if stress_rel < 1 else 0
     return stress_score
 
@@ -23,7 +23,7 @@ def calculate_stress_score(
 def calculate_design_score(
         lumen_abs: float,
         stress_abs: float,
-        stress_threshold: float,
+        uts: float,
 ) -> float:
 
     if (
@@ -37,13 +37,13 @@ def calculate_design_score(
 
         stress_score = calculate_stress_score(
             stress_abs=stress_abs,
-            stress_threshold=stress_threshold,
+            uts=uts,
         )
 
         design_score = np.sqrt(lumen_score * stress_score)
 
     else:
-        design_score = float('nan')
+        design_score = 0
 
     return design_score
 
