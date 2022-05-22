@@ -1,30 +1,102 @@
 {
   "material_1": {
-    "ELM": 1.1,
+    "name": "BioLab",
+    "ELM": 19.40,
     "UTS": 12.72
   },
   "material_2": {
-    "ELM": 10.65,
-    "UTS": 26.51
-  },
-  "material_3": {
-    "ELM": 1.02,
+    "name": "Bovine EGDE NeoCor",
+    "ELM": 15.50,
     "UTS": 11.84
   },
-  "material_4": {
-    "ELM": 0.63,
+  "material_3": {
+    "name": "Bovine GA RSCI",
+    "ELM": 17.60,
     "UTS": 10.71
   },
-  "material_5": {
-    "ELM": 6.28,
-    "UTS": 15.07
-  },
-  "material_6": {
-    "ELM": 0.81,
+  "material_4": {
+    "name": "Porcine GA RSCI",
+    "ELM": 13.50,
     "UTS": 10.62
   },
-  "material_7": {
-    "ELM": 1.07,
+  "material_5": {
+    "name": "Porcine EGDE RSCI",
+    "ELM": 8.55,
     "UTS": 4.56
+  },
+  "material_6": {
+    "name": "Hastalex",
+    "ELM": 11.30,
+    "UTS": 57.10
+  },
+  "material_7": {
+    "name": "Gore-tex (longitudinal)",
+    "ELM": 1.90,
+    "UTS": 22.50
+  },
+  "material_8": {
+    "name": "Gore-tex (transverse)",
+    "ELM": 10.10,
+    "UTS": 16.40
+  },
+  "material_9": {
+    "name": "SIBS160",
+    "ELM": 2.77,
+    "UTS": 11.62
+  },
+  "material_10": {
+    "name": "SIBS160-CNT1",
+    "ELM": 5.23,
+    "UTS": 13.55
+  },
+  "material_11": {
+    "name": "SIBS160-CNT2",
+    "ELM": 10.50,
+    "UTS": 10.09
+  },
+  "material_12": {
+    "name": "SIBS160-CNT4",
+    "ELM": 33.30,
+    "UTS": 10.03
+  },
+  "material_13": {
+    "name": "SIBS129",
+    "ELM": 0.77,
+    "UTS": 2.34
+  },
+  "material_14": {
+    "name": "SIBS129-CNT1",
+    "ELM": 7.21,
+    "UTS": 2.40
+  },
+  "material_15": {
+    "name": "SIBS129-CNT2",
+    "ELM": 8.93,
+    "UTS": 2.95
+  },
+  "material_16": {
+    "name": "SIBS129-CNT4",
+    "ELM": 12.65,
+    "UTS": 3.81
+  },
+  "material_17": {
+    "name": "Printed Silicon 50A",
+    "ELM": 2.02,
+    "UTS": 3.23
+  },
+  "material_18": {
+    "name": "Printed Silicon 80A",
+    "ELM": 7.42,
+    "UTS": 8.90
+  },
+  "material_19": {
+    "name": "Bovine GA Hulsman",
+    "ELM": 20.00,
+    "UTS": 29.00
+  },
+  "material_20": {
+    "name": "Bovine GA Bai",
+    "ELM": 10.00,
+    "UTS": 6.00
   }
 }

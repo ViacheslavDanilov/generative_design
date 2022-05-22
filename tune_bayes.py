@@ -236,13 +236,14 @@ if __name__ == '__main__':
         'ANG': (-30, 30),           # free edge angle
         'CVT': (0, 100),            # leaflet curvature
         'THK': (0.1, 1.0),          # leaflet thickness
-        'MTL': (1, 8),              # material index
+        'MTL': (1, 21),              # material index
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
+    parser.add_argument('--materials_path', default='dataset/materials.json', type=str)
     parser.add_argument('--use_sdr', action='store_true')
     parser.add_argument('--sdr_shrinkage', default=0.95, type=float)
     parser.add_argument('--sdr_pan', default=1.0, type=float)
@@ -257,7 +258,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     iteration = 0
-    f = open('dataset/materials.json', 'r')
+    f = open(args.materials_path, 'r')
     materials = json.loads(f.read())
     lumen_model_path = args.lumen_model_path
     stress_model_path = args.stress_model_path
