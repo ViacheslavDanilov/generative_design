@@ -234,9 +234,9 @@ if __name__ == '__main__':
         'HGT': (10, 25),            # valve height
         'DIA': (19, 33),            # valve diameter
         'ANG': (-30, 30),           # free edge angle
-        'CVT': (0, 100),            # leaflet curvature
+        'CVT': (0.0, 1.0),          # leaflet curvature
         'THK': (0.1, 1.0),          # leaflet thickness
-        'MTL': (1, 21),              # material index
+        'MTL': (1, 21),             # material index
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization')
