@@ -130,7 +130,7 @@ def main(
         algorithms=algorithms,
         random_state=seed,
         validation_strategy=validation_strategy,
-        total_time_limit=3600,
+        total_time_limit=18000,
         optuna_time_budget=180,
         explain_level=2,
     )
@@ -334,7 +334,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='Explain', type=str)
     parser.add_argument('--target', default='Smax', type=str, help='LMN, VMS, Smax, LEmax')
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
-    parser.add_argument('--k_folds', default=10, type=int, help='Number of cross-validation folds')
+    parser.add_argument('--k_folds', default=5, type=int, help='Number of cross-validation folds')
     parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='Robust', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Power', type=str, help='Raw, MinMax, Standard, Robust, Power')
