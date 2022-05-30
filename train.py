@@ -15,6 +15,7 @@ import pandas as pd
 from math import sqrt
 from sklearn.metrics import *
 from scipy.stats import pearsonr
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
 from tools.utils import get_golden_features, calc_mape
@@ -36,7 +37,9 @@ def main(
     mode: str,
     target: str,
     features: List[str],
+    val_strategy: str,
     k_folds: int,
+    val_size: float,
     golden_features_path: str,
     feature_scale: str,
     target_scale: str,
@@ -51,17 +54,13 @@ def main(
 
     t = time.localtime()
     current_time = time.strftime('%H%M_%d%m', t)
-    if golden_features_path is not None:
-        experiment_path = os.path.join(
-            save_dir,
-            f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{'Golden'}_{current_time}"
-        )
-    else:
-        experiment_path = os.path.join(
-            save_dir,
-            f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{'Source'}_{current_time}"
-        )
+    temp = val_strategy.upper() if val_strategy == 'cv' else val_strategy.capitalize()
+    experiment_path = os.path.join(
+        save_dir,
+        f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{temp}_{current_time}"
+    )
     os.makedirs(experiment_path, exist_ok=True)
+    del temp
 
     # Read source data
     df = pd.read_excel(data_path)
@@ -100,20 +99,43 @@ def main(
 
     y = output_scaler.transform(y) if target_scale != 'Raw' else y
 
-    validation_strategy = {
-        'validation_type': 'kfold',
-        'k_folds': k_folds,
-        'shuffle': True,
-        'stratify': True,
-        'random_seed': seed,
-    }
+    if val_strategy == 'split':
+        validation_strategy = {
+            'validation_type': 'custom',
+        }
+        train_idx, val_idx = train_test_split(
+            np.arange(len(X)),
+            test_size=val_size,
+            random_state=seed,
+            shuffle=True,
+        )
+        cv = [(train_idx, val_idx)]
+    elif val_strategy == 'cv':
+        validation_strategy = {
+            'validation_type': 'kfold',
+            'k_folds': k_folds,
+            'shuffle': True,
+            'stratify': True,
+            'random_seed': seed,
+        }
+        cv = None
+    elif val_strategy == 'auto':
+        validation_strategy = 'auto'
+        cv = None
+    else:
+        raise ValueError(f'Unknown validation strategy: {val_strategy}')
 
     # Log main parameters
+    val_str = val_strategy.upper() if val_strategy == 'cv' else val_strategy.capitalize()
+    folds_str = k_folds if (val_strategy == 'cv' and val_strategy != 'auto') else None
+    ratio_str = f'{(1 - val_size):.2f}/{val_size:.2f}' if (val_strategy == 'split' and val_strategy != 'auto') else None
     logger.info(f'Data path..........: {data_path}')
     logger.info(f'Target.............: {target}')
     logger.info(f'Scale features.....: {feature_scale}')
     logger.info(f'Scale target.......: {target_scale}')
-    logger.info(f'CV folds...........: {k_folds}')
+    logger.info(f'Validation strategy: {val_str}')
+    logger.info(f'CV folds...........: {folds_str}')
+    logger.info(f'Train/Val ratio....: {ratio_str}')
     logger.info(f'Mode...............: {mode}')
     logger.info(f'Metric.............: {metric}')
     logger.info(f'Algorithms.........: {algorithms}')
@@ -137,6 +159,7 @@ def main(
     automl.fit(
         X=X,
         y=y.squeeze(),
+        cv=cv,
     )
     automl.report()
 
@@ -167,6 +190,7 @@ def main(
 
     # Load indices
     folds_dir = os.path.join(experiment_path, 'folds')
+    k_folds = len(os.listdir(folds_dir)) // 2
     train_idx = {}
     val_idx = {}
     for fold_idx in range(k_folds):
@@ -334,7 +358,9 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='Explain', type=str)
     parser.add_argument('--target', default='Smax', type=str, help='LMN, VMS, Smax, LEmax')
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
+    parser.add_argument('--val_strategy', default='cv', type=str, help='cv, split or auto')
     parser.add_argument('--k_folds', default=5, type=int, help='Number of cross-validation folds')
+    parser.add_argument('--val_size', default=0.2, type=float, help='size of the test split')
     parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='Robust', type=str, help='Raw, MinMax, Standard, Robust, Power')
     parser.add_argument('--target_scale', default='Power', type=str, help='Raw, MinMax, Standard, Robust, Power')
@@ -349,7 +375,9 @@ if __name__ == '__main__':
         mode=args.mode,
         target=args.target,
         features=args.features,
+        val_strategy=args.val_strategy,
         k_folds=args.k_folds,
+        val_size=args.val_size,
         golden_features_path=args.golden_features_path,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
