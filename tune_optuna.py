@@ -218,21 +218,6 @@ def main(
         show_progress_bar=True,
     )
 
-    # fig = optuna.visualization.plot_optimization_history(study, target_name='Score')
-    # fig.show()
-    # fig = optuna.visualization.plot_parallel_coordinate(study)
-    # fig.show()
-    # fig = optuna.visualization.plot_contour(study)
-    # fig.show()
-    # fig = optuna.visualization.plot_param_importances(study)
-    # fig.show()
-    # fig = optuna.visualization.plot_param_importances(
-    #     study, target=lambda t: t.duration.total_seconds(), target_name="duration"
-    # )
-    # fig.show()
-    # fig = optuna.visualization.plot_edf(study)
-    # fig.show()
-
     df = pd.read_json(json_path, lines=True)
     save_path = Path(json_path).with_suffix('.xlsx')
     df.to_excel(
@@ -251,7 +236,7 @@ if __name__ == '__main__':
         'DIA': (19, 33),            # valve diameter
         'ANG': (-30, 30),           # free edge angle
         'CVT': (0.0, 1.0),          # leaflet curvature
-        'THK': (0.1, 1.0),          # leaflet thickness
+        'THK': (0.3, 1.0),          # leaflet thickness
         'MTL': (1, 20),             # material index
     }
 
