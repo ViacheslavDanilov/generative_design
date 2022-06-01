@@ -235,7 +235,7 @@ if __name__ == '__main__':
         'DIA': (19, 33),            # valve diameter
         'ANG': (-30, 30),           # free edge angle
         'CVT': (0.0, 1.0),          # leaflet curvature
-        'THK': (0.1, 1.0),          # leaflet thickness
+        'THK': (0.3, 1.0),          # leaflet thickness
         'MTL': (1, 21),             # material index
     }
 

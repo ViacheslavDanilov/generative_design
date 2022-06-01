@@ -77,7 +77,7 @@ def get_golden_features(
     return output_data
 
 
-def calc_mape(
+def calculate_mape(
         y_true: np.ndarray,
         y_pred: np.ndarray,
 ) -> float:
