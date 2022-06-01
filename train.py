@@ -18,7 +18,7 @@ from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
-from tools.utils import get_golden_features, calculate_mape
+from tools.utils import get_golden_features, calculate_mape, calculate_wape
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -212,6 +212,7 @@ def main(
     # Compute all metrics
     metrics_train = {
         'MAPE': {},
+        'WAPE': {},
         'MAE': {},
         'RMSE': {},
         'MSE': {},
@@ -221,6 +222,7 @@ def main(
     metrics_val = copy.deepcopy(metrics_train)
     for fold_idx in range(k_folds):
 
+        # MAPE
         mape_train = calculate_mape(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
@@ -232,6 +234,19 @@ def main(
         metrics_train['MAPE'][f'Fold {fold_idx+1}'] = mape_train
         metrics_val['MAPE'][f'Fold {fold_idx+1}'] = mape_val
 
+        # WAPE
+        wape_train = calculate_wape(
+            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+        )
+        wape_val = calculate_wape(
+            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+        )
+        metrics_train['WAPE'][f'Fold {fold_idx+1}'] = wape_train
+        metrics_val['WAPE'][f'Fold {fold_idx+1}'] = wape_val
+
+        # MAE
         mae_train = mean_absolute_error(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
@@ -243,6 +258,7 @@ def main(
         metrics_train['MAE'][f'Fold {fold_idx+1}'] = mae_train
         metrics_val['MAE'][f'Fold {fold_idx+1}'] = mae_val
 
+        # MSE
         mse_train = mean_squared_error(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
@@ -254,6 +270,7 @@ def main(
         metrics_train['MSE'][f'Fold {fold_idx+1}'] = mse_train
         metrics_val['MSE'][f'Fold {fold_idx+1}'] = mse_val
 
+        # RMSE
         rmse_train = sqrt(mean_squared_error(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}']))
@@ -265,6 +282,7 @@ def main(
         metrics_train['RMSE'][f'Fold {fold_idx+1}'] = rmse_train
         metrics_val['RMSE'][f'Fold {fold_idx+1}'] = rmse_val
 
+        # R^2
         r2_train = r2_score(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
@@ -276,6 +294,7 @@ def main(
         metrics_train['R^2'][f'Fold {fold_idx+1}'] = r2_train
         metrics_val['R^2'][f'Fold {fold_idx+1}'] = r2_val
 
+        # Pearson correlation
         pearson_train, _ = pearsonr(
             x=np.take(y, train_idx[f'fold {fold_idx+1}']).squeeze(),
             y=np.take(y_pred, train_idx[f'fold {fold_idx+1}']).squeeze()
@@ -316,12 +335,13 @@ def main(
 
     logger.info('')
     logger.info(f'Metrics............: Train / Val')
-    logger.info(f"MAPE...............: {df_metrics_train['MAPE'].mean():.3} / {df_metrics_val['MAPE'].mean():.3}")
-    logger.info(f"MAE................: {df_metrics_train['MAE'].mean():.3f} / {df_metrics_val['MAE'].mean():.3f}")
-    logger.info(f"MSE................: {df_metrics_train['MSE'].mean():.3f} / {df_metrics_val['MSE'].mean():.3f}")
-    logger.info(f"RMSE...............: {df_metrics_train['RMSE'].mean():.3f} / {df_metrics_val['RMSE'].mean():.3f}")
-    logger.info(f"R^2................: {df_metrics_train['R^2'].mean():.3f} / {df_metrics_val['R^2'].mean():.3f}")
-    logger.info(f"Pearson............: {df_metrics_train['Pearson'].mean():.2%} / {df_metrics_val['Pearson'].mean():.2%}")
+    logger.info(f'MAPE...............: {df_metrics_train["MAPE"].mean():.3f} / {df_metrics_val["MAPE"].mean():.3f}')
+    logger.info(f'WAPE...............: {df_metrics_train["WAPE"].mean():.3f} / {df_metrics_val["WAPE"].mean():.3f}')
+    logger.info(f'MAE................: {df_metrics_train["MAE"].mean():.3f} / {df_metrics_val["MAE"].mean():.3f}')
+    logger.info(f'MSE................: {df_metrics_train["MSE"].mean():.3f} / {df_metrics_val["MSE"].mean():.3f}')
+    logger.info(f'RMSE...............: {df_metrics_train["RMSE"].mean():.3f} / {df_metrics_val["RMSE"].mean():.3f}')
+    logger.info(f'R^2................: {df_metrics_train["R^2"].mean():.3f} / {df_metrics_val["R^2"].mean():.3f}')
+    logger.info(f'Pearson............: {df_metrics_train["Pearson"].mean():.2%} / {df_metrics_val["Pearson"].mean():.2%}')
     logger.info('')
     logger.info('Model training complete')
 
