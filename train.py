@@ -18,7 +18,7 @@ from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
-from tools.utils import get_golden_features, calc_mape
+from tools.utils import get_golden_features, calculate_mape
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -221,11 +221,11 @@ def main(
     metrics_val = copy.deepcopy(metrics_train)
     for fold_idx in range(k_folds):
 
-        mape_train = calc_mape(
+        mape_train = calculate_mape(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
         )
-        mape_val = calc_mape(
+        mape_val = calculate_mape(
             y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
         )
