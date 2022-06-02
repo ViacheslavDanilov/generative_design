@@ -1,6 +1,5 @@
 import os
 import time
-import copy
 import logging
 import warnings
 import argparse
@@ -10,15 +9,12 @@ from pathlib import Path
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import shutil
-import numpy as np
 import pandas as pd
-from math import sqrt
-from sklearn.metrics import *
-from scipy.stats import pearsonr
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
-from tools.utils import get_golden_features, calculate_mape, calculate_wape
+from tools.metrics import *
+from tools.utils import get_golden_features
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -210,108 +206,38 @@ def main(
         logger.info(f'Found and dropped {nan_mask.sum()} NaNs in predictions')
 
     # Compute all metrics
-    metrics_train = {
-        'MAPE': {},
-        'WAPE': {},
-        'MAE': {},
-        'RMSE': {},
-        'MSE': {},
-        'R^2': {},
-        'Pearson': {},
-    }
-    metrics_val = copy.deepcopy(metrics_train)
+    df_metrics_train = pd.DataFrame()
+    df_metrics_val = pd.DataFrame()
     for fold_idx in range(k_folds):
 
-        # MAPE
-        mape_train = calculate_mape(
+        _metrics_train = calculate_all_metrics(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
+            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}']),
         )
-        mape_val = calculate_mape(
+        _metrics_val = calculate_all_metrics(
             y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
+            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}']),
         )
-        metrics_train['MAPE'][f'Fold {fold_idx+1}'] = mape_train
-        metrics_val['MAPE'][f'Fold {fold_idx+1}'] = mape_val
 
-        # WAPE
-        wape_train = calculate_wape(
-            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
-        )
-        wape_val = calculate_wape(
-            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
-        )
-        metrics_train['WAPE'][f'Fold {fold_idx+1}'] = wape_train
-        metrics_val['WAPE'][f'Fold {fold_idx+1}'] = wape_val
-
-        # MAE
-        mae_train = mean_absolute_error(
-            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
-        )
-        mae_val = mean_absolute_error(
-            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
-        )
-        metrics_train['MAE'][f'Fold {fold_idx+1}'] = mae_train
-        metrics_val['MAE'][f'Fold {fold_idx+1}'] = mae_val
-
-        # MSE
-        mse_train = mean_squared_error(
-            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
-        )
-        mse_val = mean_squared_error(
-            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
-        )
-        metrics_train['MSE'][f'Fold {fold_idx+1}'] = mse_train
-        metrics_val['MSE'][f'Fold {fold_idx+1}'] = mse_val
-
-        # RMSE
-        rmse_train = sqrt(mean_squared_error(
-            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}']))
-        )
-        rmse_val = sqrt(mean_squared_error(
-            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}']))
-        )
-        metrics_train['RMSE'][f'Fold {fold_idx+1}'] = rmse_train
-        metrics_val['RMSE'][f'Fold {fold_idx+1}'] = rmse_val
-
-        # R^2
-        r2_train = r2_score(
-            y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}'])
-        )
-        r2_val = r2_score(
-            y_true=np.take(y, val_idx[f'fold {fold_idx+1}']),
-            y_pred=np.take(y_pred, val_idx[f'fold {fold_idx+1}'])
-        )
-        metrics_train['R^2'][f'Fold {fold_idx+1}'] = r2_train
-        metrics_val['R^2'][f'Fold {fold_idx+1}'] = r2_val
-
-        # Pearson correlation
-        pearson_train, _ = pearsonr(
-            x=np.take(y, train_idx[f'fold {fold_idx+1}']).squeeze(),
-            y=np.take(y_pred, train_idx[f'fold {fold_idx+1}']).squeeze()
-        )
-        pearson_val, _ = pearsonr(
-            x=np.take(y, val_idx[f'fold {fold_idx+1}']).squeeze(),
-            y=np.take(y_pred, val_idx[f'fold {fold_idx+1}']).squeeze()
-        )
-        metrics_train['Pearson'][f'Fold {fold_idx+1}'] = pearson_train
-        metrics_val['Pearson'][f'Fold {fold_idx+1}'] = pearson_val
+        df_metrics_train = df_metrics_train.append(_metrics_train, ignore_index=True)
+        df_metrics_val = df_metrics_val.append(_metrics_val, ignore_index=True)
 
     # Save metrics dataframe
-    df_metrics_train = pd.DataFrame(metrics_train)
-    df_metrics_val = pd.DataFrame(metrics_val)
     writer = pd.ExcelWriter(f'{experiment_path}/metrics.xlsx', engine='xlsxwriter')
-    df_metrics_train.to_excel(writer, sheet_name='Train')
-    df_metrics_val.to_excel(writer, sheet_name='Val')
+    df_metrics_train.index += 1
+    df_metrics_train.to_excel(
+        writer,
+        sheet_name='Train',
+        index=True,
+        index_label='Fold',
+    )
+    df_metrics_val.index += 1
+    df_metrics_val.to_excel(
+        writer,
+        sheet_name='Val',
+        index=True,
+        index_label='Fold',
+    )
     writer.save()
 
     # Save predictions
@@ -338,8 +264,11 @@ def main(
     logger.info(f'MAPE...............: {df_metrics_train["MAPE"].mean():.3f} / {df_metrics_val["MAPE"].mean():.3f}')
     logger.info(f'WAPE...............: {df_metrics_train["WAPE"].mean():.3f} / {df_metrics_val["WAPE"].mean():.3f}')
     logger.info(f'MAE................: {df_metrics_train["MAE"].mean():.3f} / {df_metrics_val["MAE"].mean():.3f}')
+    logger.info(f'MAAPE..............: {df_metrics_train["MAAPE"].mean():.3f} / {df_metrics_val["MAAPE"].mean():.3f}')
+    logger.info(f'MASE...............: {df_metrics_train["MASE"].mean():.3f} / {df_metrics_val["MASE"].mean():.3f}')
     logger.info(f'MSE................: {df_metrics_train["MSE"].mean():.3f} / {df_metrics_val["MSE"].mean():.3f}')
     logger.info(f'RMSE...............: {df_metrics_train["RMSE"].mean():.3f} / {df_metrics_val["RMSE"].mean():.3f}')
+    logger.info(f'NRMSE..............: {df_metrics_train["NRMSE"].mean():.3f} / {df_metrics_val["NRMSE"].mean():.3f}')
     logger.info(f'R^2................: {df_metrics_train["R^2"].mean():.3f} / {df_metrics_val["R^2"].mean():.3f}')
     logger.info(f'Pearson............: {df_metrics_train["Pearson"].mean():.2%} / {df_metrics_val["Pearson"].mean():.2%}')
     logger.info('')
@@ -376,15 +305,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
     parser.add_argument('--mode', default='Explain', type=str)
-    parser.add_argument('--target', default='Smax', type=str, help='LMN, VMS, Smax, LEmax')
+    parser.add_argument('--target', default='Smax', type=str, choices=['Smax', 'LMN', 'VMS', 'LEmax'])
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
-    parser.add_argument('--val_strategy', default='cv', type=str, help='cv, split or auto')
+    parser.add_argument('--val_strategy', default='cv', type=str, choices=['cv', 'split', 'auto'])
     parser.add_argument('--k_folds', default=5, type=int, help='Number of cross-validation folds')
     parser.add_argument('--val_size', default=0.2, type=float, help='size of the test split')
     parser.add_argument('--golden_features_path', default=None, type=str)
-    parser.add_argument('--feature_scale', default='Robust', type=str, help='Raw, MinMax, Standard, Robust, Power')
-    parser.add_argument('--target_scale', default='Power', type=str, help='Raw, MinMax, Standard, Robust, Power')
-    parser.add_argument('--metric', default='mae', type=str)
+    parser.add_argument('--feature_scale', default='MinMax', type=str, choices=['Raw', 'MinMax', 'Standard', 'Robust', 'Power'])
+    parser.add_argument('--target_scale', default='Power', type=str, choices=['Raw', 'MinMax', 'Standard', 'Robust', 'Power'])
+    parser.add_argument('--metric', default='rmse', type=str, choices=['mse', 'rmse', 'mae'])
     parser.add_argument('--algorithms', default=ALGORITHMS, nargs='+', type=str)
     parser.add_argument('--seed', default=11, type=int)
     parser.add_argument('--save_dir', default='experiments', type=str)
