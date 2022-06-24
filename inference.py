@@ -27,7 +27,6 @@ def predict(
     lumen_model_path: str,
     stress_model_path: str,
     features: List[str],
-    use_golden_features: bool,
     uts: float,
     save_dir: str,
 ) -> None:
@@ -52,7 +51,6 @@ def predict(
     logger.info('')
     logger.info(f'Model (Lumen).............: {lumen_model_path}')
     logger.info(f'Model (Stress)............: {stress_model_path}')
-    logger.info(f'Use golden features.......: {use_golden_features}')
 
     lumen = np.empty((data.shape[0], 1))
     lumen[:] = np.NaN
@@ -63,7 +61,6 @@ def predict(
         start = time.time()
         model_lumen = Regressor(
             model_path=lumen_model_path,
-            use_golden_features=use_golden_features,
         )
         lumen = model_lumen(data)
         end = time.time()
@@ -78,7 +75,6 @@ def predict(
         start = time.time()
         model_stress = Regressor(
             model_path=stress_model_path,
-            use_golden_features=use_golden_features,
         )
         stress = model_stress(data)
         end = time.time()
@@ -99,6 +95,7 @@ def predict(
     df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'Stress', 'Score'])
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'predictions.xlsx')
+    df_out.index += 1
     df_out.to_excel(
         save_path,
         sheet_name='Predictions',
@@ -127,7 +124,6 @@ if __name__ == '__main__':
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
-    parser.add_argument('--use_golden_features', action='store_true')
     parser.add_argument('--uts', default=8.9, type=float)
     parser.add_argument('--save_dir', default='calculations', type=str)
     args = parser.parse_args()
@@ -137,7 +133,6 @@ if __name__ == '__main__':
         lumen_model_path=args.lumen_model_path,
         stress_model_path=args.stress_model_path,
         features=args.features,
-        use_golden_features=args.use_golden_features,
         uts=args.uts,
         save_dir=args.save_dir,
     )
