@@ -14,7 +14,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
 from tools.metrics import *
-from tools.utils import get_golden_features
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -36,7 +35,6 @@ def main(
     val_strategy: str,
     k_folds: int,
     val_size: float,
-    golden_features_path: str,
     feature_scale: str,
     target_scale: str,
     metric: str,
@@ -44,9 +42,6 @@ def main(
     seed: int,
     save_dir: str,
 ):
-
-    if golden_features_path is not None:
-        assert os.path.isfile(golden_features_path), 'JSON file with golden features is not found'
 
     t = time.localtime()
     current_time = time.strftime('%H%M_%d%m', t)
@@ -75,13 +70,6 @@ def main(
         input_scaler = PowerTransformer().fit(X)
 
     X = input_scaler.transform(X) if feature_scale != 'Raw' else X
-
-    # Add golden features
-    if golden_features_path is not None:
-        X = get_golden_features(
-            input_data=X,
-            golden_features_path=golden_features_path,
-        )
 
     # Preprocess target
     if target_scale == 'MinMax':
@@ -137,7 +125,6 @@ def main(
     logger.info(f'Algorithms.........: {algorithms}')
     logger.info(f'Seed...............: {seed}')
     logger.info(f'Directory..........: {experiment_path}')
-    logger.info(f'Golden features....: {golden_features_path}')
 
     # Train models
     automl = AutoML(
@@ -251,6 +238,7 @@ def main(
         df_out[f'Fold {fold_idx+1}'] = 'Training'
         df_out.loc[val_idx[f'fold {fold_idx+1}'], f'Fold {fold_idx+1}'] = 'Validation'
 
+    df_out.index += 1
     df_out.to_excel(
         f'{experiment_path}/predictions.xlsx',
         sheet_name='Predictions',
@@ -275,8 +263,6 @@ def main(
     logger.info('')
     logger.info('Model training complete')
 
-    if golden_features_path is not None:
-        shutil.copy(golden_features_path, os.path.join(experiment_path, 'new_features.json'))
     shutil.copy(f'logs/{Path(__file__).stem}.log', experiment_path)
 
 
@@ -311,7 +297,6 @@ if __name__ == '__main__':
     parser.add_argument('--val_strategy', default='split', type=str, choices=['cv', 'split', 'auto'])
     parser.add_argument('--k_folds', default=5, type=int, help='Number of cross-validation folds')
     parser.add_argument('--val_size', default=0.2, type=float, help='size of the test split')
-    parser.add_argument('--golden_features_path', default=None, type=str)
     parser.add_argument('--feature_scale', default='MinMax', type=str, choices=['Raw', 'MinMax', 'Standard', 'Robust', 'Power'])
     parser.add_argument('--target_scale', default='Power', type=str, choices=['Raw', 'MinMax', 'Standard', 'Robust', 'Power'])
     parser.add_argument('--metric', default='rmse', type=str, choices=['mse', 'rmse', 'mae'])
@@ -328,7 +313,6 @@ if __name__ == '__main__':
         val_strategy=args.val_strategy,
         k_folds=args.k_folds,
         val_size=args.val_size,
-        golden_features_path=args.golden_features_path,
         feature_scale=args.feature_scale,
         target_scale=args.target_scale,
         metric=args.metric,
