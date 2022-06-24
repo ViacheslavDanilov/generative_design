@@ -195,6 +195,7 @@ def main(
         train_idx[f'fold {fold_idx+1}'] = np.load(_train_indices_path)
         val_idx[f'fold {fold_idx+1}'] = np.load(_val_indices_path)
 
+    # Remove NaNs from computations
     if np.any(np.isnan(y_pred)):
         nan_mask = np.isnan(y_pred).squeeze()
         nan_idx = np.where(nan_mask == True)[0]
@@ -307,7 +308,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', default='Explain', type=str)
     parser.add_argument('--target', default='Smax', type=str, choices=['Smax', 'LMN', 'VMS', 'LEmax'])
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
-    parser.add_argument('--val_strategy', default='cv', type=str, choices=['cv', 'split', 'auto'])
+    parser.add_argument('--val_strategy', default='split', type=str, choices=['cv', 'split', 'auto'])
     parser.add_argument('--k_folds', default=5, type=int, help='Number of cross-validation folds')
     parser.add_argument('--val_size', default=0.2, type=float, help='size of the test split')
     parser.add_argument('--golden_features_path', default=None, type=str)
