@@ -3,17 +3,20 @@ import time
 import logging
 import warnings
 import argparse
+import matplotlib
 from pickle import dump
 from typing import List
 from pathlib import Path
+matplotlib.use('Agg')
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import shutil
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
 
-from tools.metrics import *
+from tools.metrics import calculate_all_metrics
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -291,7 +294,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Dataset conversion')
     parser.add_argument('--data_path', default='dataset/data.xlsx', type=str)
-    parser.add_argument('--mode', default='Explain', type=str)
+    parser.add_argument('--mode', default='Compete', type=str)
     parser.add_argument('--target', default='Smax', type=str, choices=['Smax', 'LMN', 'VMS', 'LEmax'])
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--val_strategy', default='split', type=str, choices=['cv', 'split', 'auto'])
@@ -302,7 +305,7 @@ if __name__ == '__main__':
     parser.add_argument('--metric', default='rmse', type=str, choices=['mse', 'rmse', 'mae'])
     parser.add_argument('--algorithms', default=ALGORITHMS, nargs='+', type=str)
     parser.add_argument('--seed', default=11, type=int)
-    parser.add_argument('--save_dir', default='experiments', type=str)
+    parser.add_argument('--save_dir', default='experiments/train', type=str)
     args = parser.parse_args()
 
     main(
