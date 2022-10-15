@@ -247,9 +247,9 @@ if __name__ == '__main__':
     parser.add_argument('--pruner', default='Hyperband', type=str, help='Halving, Hyperband, or Median')
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
     parser.add_argument('--materials_path', default='dataset/materials.json', type=str)
-    parser.add_argument('--num_trials', default=100, type=int)
+    parser.add_argument('--num_trials', default=10000, type=int)
     parser.add_argument('--seed', default=11, type=int)
-    parser.add_argument('--save_dir', default='calculations/tuning', type=str)
+    parser.add_argument('--save_dir', default='experiments/tune', type=str)
     args = parser.parse_args()
 
     main(
