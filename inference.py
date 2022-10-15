@@ -125,7 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('--stress_model_path', default=None, type=str)
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--uts', default=8.9, type=float)
-    parser.add_argument('--save_dir', default='calculations', type=str)
+    parser.add_argument('--save_dir', default='experiments/predict', type=str)
     args = parser.parse_args()
 
     predict(
