@@ -129,6 +129,13 @@ def main(
     logger.info(f'Seed...............: {seed}')
     logger.info(f'Directory..........: {experiment_path}')
 
+    if mode == 'Compete':
+        hill_climbing_steps = 5
+        top_models_to_improve = 10
+    else:
+        hill_climbing_steps = 'auto'
+        top_models_to_improve = 'auto'
+
     # Train models
     automl = AutoML(
         results_path=experiment_path,
@@ -138,6 +145,8 @@ def main(
         algorithms=algorithms,
         random_state=seed,
         validation_strategy=validation_strategy,
+        hill_climbing_steps=hill_climbing_steps,
+        top_models_to_improve=top_models_to_improve,
         total_time_limit=18000,
         optuna_time_budget=180,
         explain_level=2,
