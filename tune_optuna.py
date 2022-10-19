@@ -178,17 +178,23 @@ def main(
     logger.info(f'Output directory.......: {save_dir}')
     logger.info('')
 
-    # Select the sampling method
-    if sampler == 'TPE':
-        sampler = optuna.samplers.TPESampler(seed=seed)
+    # Sampling method
+    if sampler == 'RS':
+        sampler = optuna.samplers.RandomSampler(seed=seed)
     elif sampler == 'CMA':
         sampler = optuna.samplers.CmaEsSampler(seed=seed)
-    elif sampler == 'RS':
-        sampler = optuna.samplers.RandomSampler(seed=seed)
+    elif sampler == 'TPE':
+        sampler = optuna.samplers.TPESampler(seed=seed)
+    elif sampler == 'NSGA':
+        sampler = optuna.samplers.NSGAIISampler(seed=seed)
+    elif sampler == 'MOTPE':
+        sampler = optuna.samplers.MOTPESampler(seed=seed)
+    elif sampler == 'QMC':
+        sampler = optuna.samplers.QMCSampler(seed=seed)
     else:
-        raise ValueError(f'Samples {sampler} is not available.')
+        raise ValueError(f'Sampler {sampler} is not available.')
 
-    # Select the pruning method
+    # Pruning method
     if pruner == 'Halving':
         pruner = optuna.pruners.SuccessiveHalvingPruner()
     elif pruner == 'Hyperband':
@@ -241,10 +247,10 @@ if __name__ == '__main__':
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization using Optuna')
-    parser.add_argument('--lumen_model_path', default=None, type=str)
-    parser.add_argument('--stress_model_path', default=None, type=str)
-    parser.add_argument('--sampler', default='TPE', type=str, help='TPE, CMA, or RS')
-    parser.add_argument('--pruner', default='Hyperband', type=str, help='Halving, Hyperband, or Median')
+    parser.add_argument('--lumen_model_path', required=True, type=str)
+    parser.add_argument('--stress_model_path', required=True, type=str)
+    parser.add_argument('--sampler', default='TPE', type=str, choices=['RS', 'CMA', 'TPE', 'NSGA', 'MOTPE', 'QMC'])
+    parser.add_argument('--pruner', default='Hyperband', type=str, choices=['Median', 'Halving', 'Hyperband'])
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
     parser.add_argument('--materials_path', default='dataset/materials.json', type=str)
     parser.add_argument('--num_trials', default=10000, type=int)
