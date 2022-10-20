@@ -152,7 +152,7 @@ def main(
 
     json_path = os.path.join(
         save_dir,
-        f'{sampler}_{pruner}_{num_trials}.json'
+        f'{sampler}_{pruner}.json'
     )
     try:
         os.remove(json_path)
@@ -204,6 +204,7 @@ def main(
     else:
         raise ValueError(f'Pruner {pruner} is not available.')
 
+    # Create and fit a study
     objective_func = lambda trial: objective(
         trial=trial,
         model_lumen=model_lumen,
@@ -212,7 +213,6 @@ def main(
         materials=materials,
         json_path=json_path,
     )
-
     study = optuna.create_study(
         direction='maximize',
         sampler=sampler,
@@ -224,7 +224,56 @@ def main(
         show_progress_bar=True,
     )
 
+    # Compute and save feature importance values
+    importance = {}
+    importance['fanova'] = optuna.importance.get_param_importances(
+        study,
+        evaluator=optuna.importance.FanovaImportanceEvaluator(
+            n_trees=64,
+            max_depth=64,
+            seed=seed,
+        ),
+        normalize=True,
+    )
+    importance['mdi'] = optuna.importance.get_param_importances(
+        study,
+        evaluator=optuna.importance.MeanDecreaseImpurityImportanceEvaluator(
+            n_trees=64,
+            max_depth=64,
+            seed=seed,
+        ),
+        normalize=False,
+    )
+    df_fanova = pd.DataFrame.from_dict(
+        importance['fanova'],
+        orient='index',
+        columns=['fANOVA'],
+    )
+    df_mdi = pd.DataFrame.from_dict(
+        importance['mdi'],
+        orient='index',
+        columns=['MDI'],
+    )
+    df_importance = pd.concat([df_fanova, df_mdi], axis='columns')
+    _save_path = Path(json_path).with_suffix('')
+    save_path = Path(f'{_save_path}_importance').with_suffix('.xlsx')
+    df_importance.to_excel(
+        save_path,
+        sheet_name='Importance',
+        index=True,
+    )
+
+    # Create column with best scores and save data frame
     df = pd.read_json(json_path, lines=True)
+    df['Score (max)'] = np.nan
+    best_val = -np.inf
+    for idx, row in df.iterrows():
+        score = row['Score']
+        if score > best_val:
+            df.at[idx, 'Score (max)'] = score
+            best_val = score
+        else:
+            df.at[idx, 'Score (max)'] = best_val
     save_path = Path(json_path).with_suffix('.xlsx')
     df.to_excel(
         save_path,
@@ -250,7 +299,7 @@ if __name__ == '__main__':
     parser.add_argument('--lumen_model_path', required=True, type=str)
     parser.add_argument('--stress_model_path', required=True, type=str)
     parser.add_argument('--sampler', default='TPE', type=str, choices=['RS', 'CMA', 'TPE', 'NSGA', 'MOTPE', 'QMC'])
-    parser.add_argument('--pruner', default='Hyperband', type=str, choices=['Median', 'Halving', 'Hyperband'])
+    parser.add_argument('--pruner', default='Halving', type=str, choices=['Median', 'Halving', 'Hyperband'])
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
     parser.add_argument('--materials_path', default='dataset/materials.json', type=str)
     parser.add_argument('--num_trials', default=10000, type=int)
