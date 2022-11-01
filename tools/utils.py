@@ -1,5 +1,6 @@
 import re
 import json
+from typing import Tuple
 
 import numpy as np
 
@@ -24,7 +25,8 @@ def calculate_design_score(
         lumen_abs: float,
         stress_abs: float,
         uts: float,
-) -> float:
+        alpha: float = 1.0,
+) -> Tuple[float, float, float]:
 
     if (
             not np.isnan(lumen_abs)
@@ -40,12 +42,17 @@ def calculate_design_score(
             uts=uts,
         )
 
-        design_score = np.sqrt(lumen_score * stress_score)
+        # alpha is chosen such that lumen_score is considered alpha times as important as stress_score
+        design_score_numer = (1 + alpha**2) * stress_score * lumen_score
+        design_score_denom = alpha**2 * stress_score + lumen_score
+        design_score = design_score_numer / design_score_denom
 
     else:
-        design_score = 0
+        lumen_score = 0.0
+        stress_score = 0.0
+        design_score = 0.0
 
-    return design_score
+    return lumen_score, stress_score, design_score
 
 
 def get_golden_features(
