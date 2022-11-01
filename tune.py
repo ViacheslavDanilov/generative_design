@@ -28,6 +28,7 @@ def objective(
         trial: optuna.Trial,
         model_lumen: Regressor,
         model_stress: Regressor,
+        alpha: float,
         param_bounds: dict,
         materials: dict,
         json_path: str,
@@ -86,9 +87,10 @@ def objective(
     stress = float(model_stress(data_point))
     stress = 0 if stress < 0 else stress
 
-    score = calculate_design_score(
+    lumen_score, stress_score, design_score = calculate_design_score(
         lumen_abs=lumen,
         stress_abs=stress,
+        alpha=alpha,
         uts=UTS,
     )
     stop = timeit.default_timer()
@@ -103,10 +105,13 @@ def objective(
                  f'THK: {THK:4.2f} - ' \
                  f'ELM: {ELM:4.1f} - ' \
                  f'UTS: {UTS:4.1f} - ' \
-                 f'MTL: {MTL:d} - ' \
+                 f'MTL: {MTL:<2d} - ' \
+                 f'Alpha: {alpha:4.2f} - ' \
                  f'Lumen: {lumen:4.2f} - ' \
                  f'Stress: {stress:5.2f} - ' \
-                 f'Score: {score:5.3f}'
+                 f'Lumen score: {lumen_score:5.3f} - ' \
+                 f'Stress score: {stress_score:5.3f} - ' \
+                 f'Design score: {design_score:5.3f}'
     logger.info(log_string)
 
     # Logging
@@ -123,9 +128,12 @@ def objective(
         'ELM': ELM,
         'UTS': UTS,
         'MTL': MTL,
+        'Alpha': alpha,
         'Lumen': lumen,
         'Stress': stress,
-        'Score': score,
+        'Lumen score': lumen_score,
+        'Stress score': stress_score,
+        'Design score': design_score,
     }
 
     with open(json_path, mode='a', encoding='utf-8') as outfile:
@@ -133,14 +141,15 @@ def objective(
         outfile.write("\n")
         outfile.close()
 
-    return score
+    return design_score
 
 
 def main(
         lumen_model_path: str,
         stress_model_path: str,
-        sampler: str,
-        pruner: str,
+        alpha: float,
+        sampler_name: str,
+        pruner_name: str,
         param_bounds: dict,
         materials_path: str,
         num_trials: int,
@@ -152,7 +161,7 @@ def main(
 
     json_path = os.path.join(
         save_dir,
-        f'{sampler}_{pruner}.json'
+        f'{sampler_name}_{pruner_name}_alpha={alpha}.json'
     )
     try:
         os.remove(json_path)
@@ -169,8 +178,9 @@ def main(
     # Log tuning parameters
     logger.info(f'Lumen model............: {lumen_model_path}')
     logger.info(f'Stress model...........: {stress_model_path}')
-    logger.info(f'Sampler................: {sampler}')
-    logger.info(f'Pruner.................: {pruner}')
+    logger.info(f'Alpha..................: {alpha}')
+    logger.info(f'Sampler................: {sampler_name}')
+    logger.info(f'Pruner.................: {pruner_name}')
     logger.info(f'Parameter bounds.......: {param_bounds}')
     logger.info(f'Number of materials....: {len(materials)}')
     logger.info(f'Number of trials.......: {num_trials}')
@@ -179,36 +189,37 @@ def main(
     logger.info('')
 
     # Sampling method
-    if sampler == 'RS':
+    if sampler_name == 'RS':
         sampler = optuna.samplers.RandomSampler(seed=seed)
-    elif sampler == 'CMA':
+    elif sampler_name == 'CMA':
         sampler = optuna.samplers.CmaEsSampler(seed=seed)
-    elif sampler == 'TPE':
+    elif sampler_name == 'TPE':
         sampler = optuna.samplers.TPESampler(seed=seed)
-    elif sampler == 'NSGA':
+    elif sampler_name == 'NSGA':
         sampler = optuna.samplers.NSGAIISampler(seed=seed)
-    elif sampler == 'MOTPE':
+    elif sampler_name == 'MOTPE':
         sampler = optuna.samplers.MOTPESampler(seed=seed)
-    elif sampler == 'QMC':
+    elif sampler_name == 'QMC':
         sampler = optuna.samplers.QMCSampler(seed=seed)
     else:
-        raise ValueError(f'Sampler {sampler} is not available.')
+        raise ValueError(f'Sampler {sampler_name} is not available.')
 
     # Pruning method
-    if pruner == 'Halving':
+    if pruner_name == 'Halving':
         pruner = optuna.pruners.SuccessiveHalvingPruner()
-    elif pruner == 'Hyperband':
+    elif pruner_name == 'Hyperband':
         pruner = optuna.pruners.HyperbandPruner()
-    elif pruner == 'Median':
+    elif pruner_name == 'Median':
         pruner = optuna.pruners.MedianPruner()
     else:
-        raise ValueError(f'Pruner {pruner} is not available.')
+        raise ValueError(f'Pruner {pruner_name} is not available.')
 
     # Create and fit a study
     objective_func = lambda trial: objective(
         trial=trial,
         model_lumen=model_lumen,
         model_stress=model_stress,
+        alpha=alpha,
         param_bounds=param_bounds,
         materials=materials,
         json_path=json_path,
@@ -255,25 +266,31 @@ def main(
         columns=['MDI'],
     )
     df_importance = pd.concat([df_fanova, df_mdi], axis='columns')
+    df_importance['Alpha'] = alpha
+    df_importance['Method'] = sampler_name
+    df_importance.sort_index(ascending=True, inplace=True)
     _save_path = Path(json_path).with_suffix('')
-    save_path = Path(f'{_save_path}_importance').with_suffix('.xlsx')
+    save_path = Path(f'{_save_path}_importance.xlsx')
     df_importance.to_excel(
         save_path,
         sheet_name='Importance',
+        index_label='Parameter',
         index=True,
     )
 
     # Create column with best scores and save data frame
     df = pd.read_json(json_path, lines=True)
-    df['Score (max)'] = np.nan
+    df['Design score (max)'] = np.nan
+    df = df.reindex(columns=[col for col in df.columns if col != 'Alpha'] + ['Alpha'])
+    df['Method'] = sampler_name
     best_val = -np.inf
     for idx, row in df.iterrows():
-        score = row['Score']
+        score = row['Design score']
         if score > best_val:
-            df.at[idx, 'Score (max)'] = score
+            df.at[idx, 'Design score (max)'] = score
             best_val = score
         else:
-            df.at[idx, 'Score (max)'] = best_val
+            df.at[idx, 'Design score (max)'] = best_val
     save_path = Path(json_path).with_suffix('.xlsx')
     df.to_excel(
         save_path,
@@ -298,11 +315,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparameter optimization using Optuna')
     parser.add_argument('--lumen_model_path', required=True, type=str)
     parser.add_argument('--stress_model_path', required=True, type=str)
-    parser.add_argument('--sampler', default='TPE', type=str, choices=['RS', 'CMA', 'TPE', 'NSGA', 'MOTPE', 'QMC'])
-    parser.add_argument('--pruner', default='Halving', type=str, choices=['Median', 'Halving', 'Hyperband'])
+    parser.add_argument('--alpha', default=1.0, type=float)
+    parser.add_argument('--sampler_name', default='TPE', type=str, choices=['RS', 'CMA', 'TPE', 'NSGA', 'MOTPE', 'QMC'])
+    parser.add_argument('--pruner_name', default='Halving', type=str, choices=['Median', 'Halving', 'Hyperband'])
     parser.add_argument('--param_bounds', default=BOUNDS, type=str)
     parser.add_argument('--materials_path', default='dataset/materials.json', type=str)
-    parser.add_argument('--num_trials', default=10000, type=int)
+    parser.add_argument('--num_trials', default=2000, type=int)
     parser.add_argument('--seed', default=11, type=int)
     parser.add_argument('--save_dir', default='experiments/tune', type=str)
     args = parser.parse_args()
@@ -310,8 +328,9 @@ if __name__ == '__main__':
     main(
         lumen_model_path=args.lumen_model_path,
         stress_model_path=args.stress_model_path,
-        sampler=args.sampler,
-        pruner=args.pruner,
+        alpha=args.alpha,
+        sampler_name=args.sampler_name,
+        pruner_name=args.pruner_name,
         param_bounds=args.param_bounds,
         materials_path=args.materials_path,
         num_trials=args.num_trials,
