@@ -26,6 +26,7 @@ def predict(
     data: Union[List[float], np.ndarray, pd.DataFrame, str],
     lumen_model_path: str,
     stress_model_path: str,
+    alpha: float,
     features: List[str],
     uts: float,
     save_dir: str,
@@ -51,6 +52,7 @@ def predict(
     logger.info('')
     logger.info(f'Model (Lumen).............: {lumen_model_path}')
     logger.info(f'Model (Stress)............: {stress_model_path}')
+    logger.info(f'Alpha.....................: {alpha}')
 
     lumen = np.empty((data.shape[0], 1))
     lumen[:] = np.NaN
@@ -80,19 +82,43 @@ def predict(
         end = time.time()
         logger.info(f'Stress prediction took....: {end - start:.0f} seconds')
 
-    score = np.empty((data.shape[0], 1))
-    score[:] = np.NaN
+    lumen_score = np.empty((data.shape[0], 1))
+    stress_score = np.empty((data.shape[0], 1))
+    design_score = np.empty((data.shape[0], 1))
+    lumen_score[:] = np.NaN
+    stress_score[:] = np.NaN
+    design_score[:] = np.NaN
     for idx, (_lumen, _stress) in enumerate(zip(lumen, stress)):
         _lumen = float(_lumen.squeeze())
         _stress = float(_stress.squeeze())
-        score[idx] = calculate_design_score(
+        lumen_score[idx], stress_score[idx], design_score[idx] = calculate_design_score(
             lumen_abs=_lumen,
             stress_abs=_stress,
+            alpha=alpha,
             uts=uts,
         )
 
-    data = np.hstack([data, lumen, stress, score])
-    df_out = pd.DataFrame(data, columns=[*features, 'Lumen', 'Stress', 'Score'])
+    data = np.hstack(
+        [
+            data,
+            lumen,
+            stress,
+            lumen_score,
+            stress_score,
+            design_score
+        ]
+    )
+    df_out = pd.DataFrame(
+        data,
+        columns=[
+            *features,
+            'Lumen',
+            'Stress',
+            'Lumen score',
+            'Stress score',
+            'Design score'
+        ]
+    )
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'predictions.xlsx')
     df_out.index += 1
@@ -123,6 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('--data', default='dataset/test.xlsx', nargs='+')
     parser.add_argument('--lumen_model_path', default=None, type=str)
     parser.add_argument('--stress_model_path', default=None, type=str)
+    parser.add_argument('--alpha', default=1, type=float)
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--uts', default=8.9, type=float)
     parser.add_argument('--save_dir', default='experiments/predict', type=str)
@@ -132,6 +159,7 @@ if __name__ == '__main__':
         data=args.data,
         lumen_model_path=args.lumen_model_path,
         stress_model_path=args.stress_model_path,
+        alpha=args.alpha,
         features=args.features,
         uts=args.uts,
         save_dir=args.save_dir,
