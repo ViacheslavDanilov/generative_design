@@ -149,3 +149,6 @@ models/
 
 # Different computations
 calculations/
+
+# Temporal files and scripts
+temp/
