@@ -65,11 +65,11 @@ def main(
     # Preprocess features
     if feature_scale == 'MinMax':
         input_scaler = MinMaxScaler().fit(X)
-    if feature_scale == 'Standard':
+    elif feature_scale == 'Standard':
         input_scaler = StandardScaler().fit(X)
-    if feature_scale == 'Robust':
+    elif feature_scale == 'Robust':
         input_scaler = RobustScaler().fit(X)
-    if feature_scale == 'Power':
+    elif feature_scale == 'Power':
         input_scaler = PowerTransformer().fit(X)
 
     X = input_scaler.transform(X) if feature_scale != 'Raw' else X
@@ -77,11 +77,11 @@ def main(
     # Preprocess target
     if target_scale == 'MinMax':
         output_scaler = MinMaxScaler().fit(y)
-    if target_scale == 'Standard':
+    elif target_scale == 'Standard':
         output_scaler = StandardScaler().fit(y)
-    if target_scale == 'Robust':
+    elif target_scale == 'Robust':
         output_scaler = RobustScaler().fit(y)
-    if target_scale == 'Power':
+    elif target_scale == 'Power':
         output_scaler = PowerTransformer(method='yeo-johnson').fit(y)
 
     y = output_scaler.transform(y) if target_scale != 'Raw' else y
