@@ -85,18 +85,20 @@ def main(
             pickle.dump(shap_values, f)
             logger.info(f'Save SHAP values: {explainer_path}')
 
-        column_names = [f'{col}_shap' for col in FEATURES]
-        df_shap = pd.DataFrame(shap_values.values, columns=column_names)
-        df_out = pd.concat([df_, df_shap], axis=1)
-        save_path_shap = Path(explainer_path).with_suffix('.xlsx')
-        df_out.to_excel(
-            save_path_shap,
-            sheet_name='SHAP',
-            index=False,
-        )
-
     else:
         raise ValueError('Unexpected error occurred while saving/loading SHAP values')
+
+    # Create and save data frame with SHAP values
+    column_names = [f'{col}_shap' for col in FEATURES]
+    df_shap = pd.DataFrame(shap_values.values, columns=column_names)
+    df_.reset_index(drop=True, inplace=True)
+    df_out = pd.concat([df_, df_shap], axis=1)
+    save_path_shap = Path(explainer_path).with_suffix('.xlsx')
+    df_out.to_excel(
+        save_path_shap,
+        sheet_name='SHAP',
+        index=False,
+    )
 
     # Create a beeswarm plot
     col2num = {col: i for i, col in enumerate(FEATURES)}
