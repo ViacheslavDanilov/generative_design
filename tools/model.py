@@ -49,4 +49,10 @@ class Regressor:
         else:
             output = _output.reshape(-1, 1)
 
+        output = np.clip(
+            a=output,
+            a_min=0,
+            a_max=1,
+        )
+
         return output
