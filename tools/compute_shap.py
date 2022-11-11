@@ -5,8 +5,8 @@ import pickle
 import logging
 import argparse
 import pandas as pd
-from pathlib import Path
 from typing import List
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 os.makedirs('logs', exist_ok=True)
@@ -67,7 +67,7 @@ def main(
 
     # Initialize SHAP explainer and calculate Shapley values
     os.makedirs(save_dir, exist_ok=True)
-    explainer_path = os.path.join(save_dir, f'SHAP_{target}_{subset}')
+    explainer_path = os.path.join(save_dir, f'SHAP_{target}_{subset}.pickle')
     if Path(explainer_path).exists():
         with open(explainer_path, 'rb') as f:
             shap_values = pickle.load(f)
@@ -85,14 +85,14 @@ def main(
             pickle.dump(shap_values, f)
             logger.info(f'Save SHAP values: {explainer_path}')
 
-        df_shap = pd.DataFrame(shap_values.values, columns=FEATURES)
+        column_names = [f'{col}_shap' for col in FEATURES]
+        df_shap = pd.DataFrame(shap_values.values, columns=column_names)
+        df_out = pd.concat([df_, df_shap], axis=1)
         save_path_shap = Path(explainer_path).with_suffix('.xlsx')
-        df_shap.index += 1
-        df_shap.to_excel(
+        df_out.to_excel(
             save_path_shap,
             sheet_name='SHAP',
-            index_label='Design',
-            index=True,
+            index=False,
         )
 
     else:
