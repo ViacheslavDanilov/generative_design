@@ -8,7 +8,6 @@ import pandas as pd
 from pathlib import Path
 from typing import List
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -88,10 +87,11 @@ def main(
 
         df_shap = pd.DataFrame(shap_values.values, columns=FEATURES)
         save_path_shap = Path(explainer_path).with_suffix('.xlsx')
+        df_shap.index += 1
         df_shap.to_excel(
             save_path_shap,
             sheet_name='SHAP',
-            index_label='ID',
+            index_label='Design',
             index=True,
         )
 
