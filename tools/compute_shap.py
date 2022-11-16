@@ -125,6 +125,10 @@ def main(
     fig.show()
     fig.savefig(save_path_figure, dpi=500)
 
+    shap_abs_values = list(shap_values.abs.mean(0).values)
+    shap_abs_values = [round(x, 4) for x in shap_abs_values]
+    logger.info(f'SHAP values........: {shap_abs_values}')
+    logger.info(f'Features...........: {shap_values.feature_names}')
     logger.info('Complete')
 
 
