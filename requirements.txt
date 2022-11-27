@@ -8,7 +8,6 @@ scipy==1.8.1
 tqdm==4.64.1
 ipython==8.0.1
 mljar-supervised==0.11.3
-bayesian-optimization==1.2.0
 xlsxwriter==3.0.3
 optuna==3.0.3
 shap==0.36.0
