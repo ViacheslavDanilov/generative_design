@@ -1,22 +1,22 @@
+import json
 import os
 import re
-import json
 from pathlib import Path
-from typing import List, Union, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 
 
 def calculate_lumen_score(
-        lumen_abs: float,
+    lumen_abs: float,
 ) -> float:
     lumen_score = lumen_abs
     return lumen_score
 
 
 def calculate_stress_score(
-        stress_abs: float,
-        uts: float = 8.9,
+    stress_abs: float,
+    uts: float = 8.9,
 ) -> float:
     stress_rel = stress_abs / uts
     stress_score = 1 - stress_rel if stress_rel < 1 else 0
@@ -24,17 +24,12 @@ def calculate_stress_score(
 
 
 def calculate_design_score(
-        lumen_abs: float,
-        stress_abs: float,
-        uts: float,
-        alpha: float = 1.0,
+    lumen_abs: float,
+    stress_abs: float,
+    uts: float,
+    alpha: float = 1.0,
 ) -> Tuple[float, float, float]:
-
-    if (
-            not np.isnan(lumen_abs)
-            and not np.isnan(stress_abs)
-    ):
-
+    if not np.isnan(lumen_abs) and not np.isnan(stress_abs):
         lumen_score = calculate_lumen_score(
             lumen_abs=lumen_abs,
         )
@@ -62,8 +57,7 @@ def get_file_list(
     ext_list: Union[List[str], str],
     file_template: str = '',
 ) -> List[str]:
-    """
-    Get list of files with the specified extensions
+    """Get list of files with the specified extensions
 
     Args:
         src_dirs: directory(s) with files inside
@@ -72,19 +66,15 @@ def get_file_list(
     Returns:
         all_files: a list of file paths
     """
-
     all_files = []
-    src_dirs = [src_dirs, ] if isinstance(src_dirs, str) else src_dirs
-    ext_list = [ext_list, ] if isinstance(ext_list, str) else ext_list
+    src_dirs = [src_dirs] if isinstance(src_dirs, str) else src_dirs
+    ext_list = [ext_list] if isinstance(ext_list, str) else ext_list
     for src_dir in src_dirs:
         for root, dirs, files in os.walk(src_dir):
             for file in files:
                 file_ext = Path(file).suffix
                 file_ext = file_ext.lower()
-                if (
-                    file_ext in ext_list
-                    and file_template in file
-                ):
+                if file_ext in ext_list and file_template in file:
                     file_path = os.path.join(root, file)
                     all_files.append(file_path)
     all_files.sort()
@@ -92,8 +82,8 @@ def get_file_list(
 
 
 def get_golden_features(
-        input_data: np.ndarray,
-        golden_features_path: str,
+    input_data: np.ndarray,
+    golden_features_path: str,
 ) -> np.ndarray:
     f = open(golden_features_path)
     _golden_features = json.load(f)
@@ -105,13 +95,25 @@ def get_golden_features(
         feature_2_id = int(re.findall(r'\d+', new_feature['feature2'])[0]) - 1
 
         if new_feature['operation'] == 'sum':
-            _feature_data = np.expand_dims(input_data[:, feature_1_id] + input_data[:, feature_2_id], axis=1)
+            _feature_data = np.expand_dims(
+                input_data[:, feature_1_id] + input_data[:, feature_2_id],
+                axis=1,
+            )
         elif new_feature['operation'] == 'diff':
-            _feature_data = np.expand_dims(input_data[:, feature_1_id] - input_data[:, feature_2_id], axis=1)
+            _feature_data = np.expand_dims(
+                input_data[:, feature_1_id] - input_data[:, feature_2_id],
+                axis=1,
+            )
         elif new_feature['operation'] == 'multiply':
-            _feature_data = np.expand_dims(input_data[:, feature_1_id] * input_data[:, feature_2_id], axis=1)
+            _feature_data = np.expand_dims(
+                input_data[:, feature_1_id] * input_data[:, feature_2_id],
+                axis=1,
+            )
         elif new_feature['operation'] == 'ratio':
-            _feature_data = np.expand_dims(input_data[:, feature_1_id] / input_data[:, feature_2_id], axis=1)
+            _feature_data = np.expand_dims(
+                input_data[:, feature_1_id] / input_data[:, feature_2_id],
+                axis=1,
+            )
         else:
             raise ValueError(f"Unknown operation {new_feature['operation']}")
 

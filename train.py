@@ -1,20 +1,22 @@
-import os
-import time
-import logging
-import warnings
 import argparse
-import matplotlib
+import logging
+import os
+import shutil
+import time
+import warnings
+from pathlib import Path
 from pickle import dump
 from typing import List
-from pathlib import Path
+
+import matplotlib
+
 matplotlib.use('Agg')
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import shutil
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, PowerTransformer
+from sklearn.preprocessing import MinMaxScaler, PowerTransformer, RobustScaler, StandardScaler
 
 from tools.metrics import calculate_all_metrics
 
@@ -45,13 +47,12 @@ def main(
     seed: int,
     save_dir: str,
 ):
-
     t = time.localtime()
     current_time = time.strftime('%H%M_%d%m', t)
     temp = val_strategy.upper() if val_strategy == 'cv' else val_strategy.capitalize()
     experiment_path = os.path.join(
         save_dir,
-        f"{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{temp}_{current_time}"
+        f'{target}_{mode.lower()}_{metric}_{feature_scale}_{target_scale}_{temp}_{current_time}',
     )
     os.makedirs(experiment_path, exist_ok=True)
     del temp
@@ -115,7 +116,11 @@ def main(
     # Log main parameters
     val_str = val_strategy.upper() if val_strategy == 'cv' else val_strategy.capitalize()
     folds_str = k_folds if (val_strategy == 'cv' and val_strategy != 'auto') else None
-    ratio_str = f'{(1 - val_size):.2f}/{val_size:.2f}' if (val_strategy == 'split' and val_strategy != 'auto') else None
+    ratio_str = (
+        f'{(1 - val_size):.2f}/{val_size:.2f}'
+        if (val_strategy == 'split' and val_strategy != 'auto')
+        else None
+    )
     logger.info(f'Data path..........: {data_path}')
     logger.info(f'Target.............: {target}')
     logger.info(f'Scale features.....: {feature_scale}')
@@ -175,7 +180,7 @@ def main(
     y_pred = y_pred.reshape(-1, 1)
 
     # Scale back the data to the original representation
-    X = X[:, :len(features)]
+    X = X[:, : len(features)]
     if feature_scale != 'Raw':
         X = input_scaler.inverse_transform(X)
 
@@ -209,7 +214,6 @@ def main(
     df_metrics_train = pd.DataFrame()
     df_metrics_val = pd.DataFrame()
     for fold_idx in range(k_folds):
-
         _metrics_train = calculate_all_metrics(
             y_true=np.take(y, train_idx[f'fold {fold_idx+1}']),
             y_pred=np.take(y_pred, train_idx[f'fold {fold_idx+1}']),
@@ -279,7 +283,6 @@ def main(
 
 
 if __name__ == '__main__':
-
     ALGORITHMS = [
         'Baseline',
         'Linear',
@@ -290,7 +293,7 @@ if __name__ == '__main__':
         'LightGBM',
         'Xgboost',
         'CatBoost',
-        ]
+    ]
 
     FEATURES = [
         'HGT',

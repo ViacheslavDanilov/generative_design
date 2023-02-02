@@ -1,13 +1,13 @@
-import os
-import json
-import timeit
-import logging
 import argparse
-from pathlib import Path
+import json
+import logging
+import os
+import timeit
 from datetime import datetime
+from pathlib import Path
 
-import optuna
 import numpy as np
+import optuna
 import pandas as pd
 
 from tools.utils import calculate_design_score
@@ -25,15 +25,14 @@ from tools.model import Regressor
 
 
 def objective(
-        trial: optuna.Trial,
-        model_lumen: Regressor,
-        model_stress: Regressor,
-        alpha: float,
-        param_bounds: dict,
-        materials: dict,
-        json_path: str,
+    trial: optuna.Trial,
+    model_lumen: Regressor,
+    model_stress: Regressor,
+    alpha: float,
+    param_bounds: dict,
+    materials: dict,
+    json_path: str,
 ):
-
     HGT = trial.suggest_float(
         'HGT',
         param_bounds['HGT'][0],
@@ -77,7 +76,7 @@ def objective(
             CVT,
             THK,
             ELM,
-        ]
+        ],
     )
     data_point = _data_point.reshape(1, -1)
 
@@ -96,22 +95,24 @@ def objective(
     stop = timeit.default_timer()
 
     # Reporting
-    log_string = f'Iteration: {(trial.number + 1):04d} - ' \
-                 f'Elapsed: {int(stop - start):3d} - ' \
-                 f'HGT: {HGT:4.1f} - ' \
-                 f'DIA: {DIA:4.1f} - ' \
-                 f'ANG: {ANG:5.1f} - ' \
-                 f'CVT: {CVT:4.1f} - ' \
-                 f'THK: {THK:4.2f} - ' \
-                 f'ELM: {ELM:4.1f} - ' \
-                 f'UTS: {UTS:4.1f} - ' \
-                 f'MTL: {MTL:<2d} - ' \
-                 f'Alpha: {alpha:4.2f} - ' \
-                 f'Lumen: {lumen:4.2f} - ' \
-                 f'Stress: {stress:5.2f} - ' \
-                 f'Lumen score: {lumen_score:5.3f} - ' \
-                 f'Stress score: {stress_score:5.3f} - ' \
-                 f'Design score: {design_score:5.3f}'
+    log_string = (
+        f'Iteration: {(trial.number + 1):04d} - '
+        f'Elapsed: {int(stop - start):3d} - '
+        f'HGT: {HGT:4.1f} - '
+        f'DIA: {DIA:4.1f} - '
+        f'ANG: {ANG:5.1f} - '
+        f'CVT: {CVT:4.1f} - '
+        f'THK: {THK:4.2f} - '
+        f'ELM: {ELM:4.1f} - '
+        f'UTS: {UTS:4.1f} - '
+        f'MTL: {MTL:<2d} - '
+        f'Alpha: {alpha:4.2f} - '
+        f'Lumen: {lumen:4.2f} - '
+        f'Stress: {stress:5.2f} - '
+        f'Lumen score: {lumen_score:5.3f} - '
+        f'Stress score: {stress_score:5.3f} - '
+        f'Design score: {design_score:5.3f}'
+    )
     logger.info(log_string)
 
     # Logging
@@ -138,30 +139,29 @@ def objective(
 
     with open(json_path, mode='a', encoding='utf-8') as outfile:
         outfile.write(json.dumps(log_params))
-        outfile.write("\n")
+        outfile.write('\n')
         outfile.close()
 
     return design_score
 
 
 def main(
-        lumen_model_path: str,
-        stress_model_path: str,
-        alpha: float,
-        sampler_name: str,
-        pruner_name: str,
-        param_bounds: dict,
-        materials_path: str,
-        num_trials: int,
-        seed: int,
-        save_dir: str,
+    lumen_model_path: str,
+    stress_model_path: str,
+    alpha: float,
+    sampler_name: str,
+    pruner_name: str,
+    param_bounds: dict,
+    materials_path: str,
+    num_trials: int,
+    seed: int,
+    save_dir: str,
 ) -> None:
-
     os.makedirs(save_dir, exist_ok=True)
 
     json_path = os.path.join(
         save_dir,
-        f'{sampler_name}_{pruner_name}_alpha={alpha}.json'
+        f'{sampler_name}_{pruner_name}_alpha={alpha}.json',
     )
     try:
         os.remove(json_path)
@@ -302,14 +302,13 @@ def main(
 
 
 if __name__ == '__main__':
-
     BOUNDS = {
-        'HGT': (10, 25),            # valve height
-        'DIA': (19, 33),            # valve diameter
-        'ANG': (-30, 30),           # free edge angle
-        'CVT': (0.0, 1.0),          # leaflet curvature
-        'THK': (0.3, 1.0),          # leaflet thickness
-        'MTL': (1, 20),             # material index
+        'HGT': (10, 25),    # valve height
+        'DIA': (19, 33),    # valve diameter
+        'ANG': (-30, 30),   # free edge angle
+        'CVT': (0.0, 1.0),  # leaflet curvature
+        'THK': (0.3, 1.0),  # leaflet thickness
+        'MTL': (1, 20),     # material index
     }
 
     parser = argparse.ArgumentParser(description='Hyperparameter optimization using Optuna')
