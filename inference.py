@@ -1,7 +1,7 @@
+import argparse
+import logging
 import os
 import time
-import logging
-import argparse
 from pathlib import Path
 from typing import List, Union
 
@@ -31,11 +31,7 @@ def predict(
     uts: float,
     save_dir: str,
 ) -> None:
-
-    if (
-            isinstance(data, str)
-            and Path(data).suffix == '.xlsx'
-    ):
+    if isinstance(data, str) and Path(data).suffix == '.xlsx':
         data = pd.read_excel(data)
         data = data[features].values
     elif isinstance(data, np.ndarray):
@@ -56,10 +52,7 @@ def predict(
 
     lumen = np.empty((data.shape[0], 1))
     lumen[:] = np.NaN
-    if (
-            isinstance(lumen_model_path, str)
-            and lumen_model_path is not None
-    ):
+    if isinstance(lumen_model_path, str) and lumen_model_path is not None:
         start = time.time()
         model_lumen = Regressor(
             model_path=lumen_model_path,
@@ -70,10 +63,7 @@ def predict(
 
     stress = np.empty((data.shape[0], 1))
     stress[:] = np.NaN
-    if (
-            isinstance(stress_model_path, str)
-            and stress_model_path is not None
-    ):
+    if isinstance(stress_model_path, str) and stress_model_path is not None:
         start = time.time()
         model_stress = Regressor(
             model_path=stress_model_path,
@@ -105,8 +95,8 @@ def predict(
             stress,
             lumen_score,
             stress_score,
-            design_score
-        ]
+            design_score,
+        ],
     )
     df_out = pd.DataFrame(
         data,
@@ -116,8 +106,8 @@ def predict(
             'Stress',
             'Lumen score',
             'Stress score',
-            'Design score'
-        ]
+            'Design score',
+        ],
     )
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, 'predictions.xlsx')
@@ -135,7 +125,6 @@ def predict(
 
 
 if __name__ == '__main__':
-
     FEATURES = [
         'HGT',
         'DIA',
@@ -146,13 +135,13 @@ if __name__ == '__main__':
     ]
 
     parser = argparse.ArgumentParser(description='Model inference')
-    parser.add_argument('--data', default='dataset/test.xlsx', nargs='+')
-    parser.add_argument('--lumen_model_path', default=None, type=str)
-    parser.add_argument('--stress_model_path', default=None, type=str)
+    parser.add_argument('--data', default='dataset/data_demo.xlsx', nargs='+')
+    parser.add_argument('--lumen_model_path', default='models/LMN', type=str)
+    parser.add_argument('--stress_model_path', default='models/STS', type=str)
     parser.add_argument('--alpha', default=1, type=float)
     parser.add_argument('--features', default=FEATURES, nargs='+', type=str)
     parser.add_argument('--uts', default=8.9, type=float)
-    parser.add_argument('--save_dir', default='experiments/predict', type=str)
+    parser.add_argument('--save_dir', default='experiments', type=str)
     args = parser.parse_args()
 
     predict(

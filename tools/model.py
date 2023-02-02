@@ -1,19 +1,19 @@
 import os
+from pickle import load
 from warnings import simplefilter
+
 simplefilter('ignore', UserWarning)
 simplefilter('ignore', FutureWarning)
 
 import numpy as np
-from pickle import load
 from supervised.automl import AutoML
 
 
 class Regressor:
     def __init__(
-            self,
-            model_path: str,
+        self,
+        model_path: str,
     ):
-
         # Check the existence of the input_scaler.pkl
         try:
             self.input_scaler = load(open(os.path.join(model_path, 'input_scaler.pkl'), 'rb'))
@@ -30,10 +30,9 @@ class Regressor:
         self.model = AutoML(results_path=model_path)
 
     def __call__(
-            self,
-            data: np.ndarray,
+        self,
+        data: np.ndarray,
     ):
-
         # Scale input data
         if self.input_scaler is not None:
             _data = self.input_scaler.transform(data)

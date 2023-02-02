@@ -1,13 +1,13 @@
-import os
-
-import shap
-import pickle
-import logging
 import argparse
-import pandas as pd
-from typing import List
+import logging
+import os
+import pickle
 from pathlib import Path
+from typing import List
+
 import matplotlib.pyplot as plt
+import pandas as pd
+import shap
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -22,12 +22,12 @@ from tools.model import Regressor
 
 
 def main(
-        data_path: str,
-        model_path: str,
-        target: str = 'LMN',
-        subset: str = 'val',
-        features: List[str] = None,
-        save_dir: str = 'experiments/shap',
+    data_path: str,
+    model_path: str,
+    target: str = 'LMN',
+    subset: str = 'val',
+    features: List[str] = None,
+    save_dir: str = 'experiments/shap',
 ) -> None:
 
     if features is None:
@@ -44,10 +44,7 @@ def main(
     df = pd.read_excel(data_path)
 
     # Extract target data frame
-    if (
-            target == 'LMN'
-            or target == 'STS'
-    ):
+    if target == 'LMN' or target == 'STS':
         df_ = df[df['Metric'] == target]
     else:
         raise ValueError(f'Unknown target value {target}')
@@ -77,7 +74,7 @@ def main(
         explainer = shap.Explainer(
             model=model,
             masker=data_shap,
-            output_names=[target, ],
+            output_names=[target],
         )
         shap_values = explainer(data_shap)
         shap_values.feature_names = FEATURES
@@ -114,7 +111,7 @@ def main(
     plt.gcf().set_size_inches(5, 5)
     plt.xlabel('SHAP')
     plt.xlim([-0.65, 0.65])
-    plt.rc('font', size=0)      # Decrease the padding (not font)
+    plt.rc('font', size=0)  # Decrease the padding (not font)
     plt.axhline(-1, linewidth=2, color='black', alpha=1)
     plt.axvline(0, linewidth=1, color='black', alpha=1)
     plt.rcParams['font.family'] = 'BentonSans'
