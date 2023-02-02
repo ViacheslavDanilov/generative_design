@@ -11,6 +11,7 @@ pillow==9.2.0
 pre-commit==2.21.0
 scikit-learn==1.1.2
 scipy==1.8.1
+shap==0.36.0
 toml==0.10.2
 tomli==2.0.1
 tqdm==4.64.1
