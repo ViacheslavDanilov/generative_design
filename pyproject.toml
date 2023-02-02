@@ -15,7 +15,7 @@ ensure_newline_before_comments = true
 
 [tool.pydocstyle]
 convention = 'google'
-add_ignore = 'D100, D102, D103, D104, D105, D106, D107'
+add_ignore = 'D100, D102, D103, D104, D105, D106, D107, D415'
 
 [tool.mypy]
 install_types = true
