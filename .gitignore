@@ -142,7 +142,6 @@ logs/
 
 # Experiments directory
 AutoML*/
-experiments/
 
 # Models
 models/
@@ -152,3 +151,21 @@ calculations/
 
 # Temporal files and scripts
 temp/
+
+# Spyder
+.spyproject/
+
+# Jupyter NB Checkpoints
+.ipynb_checkpoints/
+
+# Mac OS-specific storage files
+.DS_Store
+
+# vim
+*.swp
+*.swo
+
+# DVC files
+.dvc/config.local
+.dvc/tmp
+.dvc/cache
