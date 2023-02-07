@@ -51,7 +51,7 @@ class Regressor:
         output = np.clip(
             a=output,
             a_min=0,
-            a_max=1,
+            a_max=None,
         )
 
         return output
