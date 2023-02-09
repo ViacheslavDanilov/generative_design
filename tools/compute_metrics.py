@@ -19,42 +19,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_optimizer_name(
-    path: str,
-) -> str:
-    if 'CMA' in path:
-        optimizer = 'CMA'
-    elif 'MOTPE' in path:
-        optimizer = 'CMA'
-    elif 'NSGA' in path:
-        optimizer = 'CMA'
-    elif 'QMC' in path:
-        optimizer = 'CMA'
-    elif 'RS' in path:
-        optimizer = 'CMA'
-    elif 'TPE' in path:
-        optimizer = 'CMA'
-    else:
-        optimizer = 'UNK'
-
-    return optimizer
-
-
 def main(
     data_path: str,
     save_dir: str,
+    optimizer: str = 'TPE',
+    alpha: str = None,
 ) -> None:
     df = pd.read_excel(data_path)
-    optimizer = get_optimizer_name(data_path)
+
+    if optimizer is not None:
+        df = df[df['Optimizer'] == optimizer]
+
+    if alpha is not None:
+        save_path = os.path.join(save_dir, f'{optimizer}_{alpha:.1f}_metrics.xlsx')
+        df = df[df['Alpha'] == alpha]
+    else:
+        save_path = os.path.join(save_dir, f'{optimizer}_metrics.xlsx')
 
     os.makedirs(save_dir, exist_ok=True)
-    save_path = os.path.join(save_dir, f'{optimizer}_metrics.xlsx')
     writer = pd.ExcelWriter(save_path, engine='xlsxwriter')
 
     for target in ['LMN', 'STS']:
-        df_target = df[[f'{target}_GT', f'{target}_Pred']]
-        y_true = np.array(df_target[f'{target}_GT'])
-        y_pred = np.array(df_target[f'{target}_Pred'])
+        y_true = np.array(df[f'{target}_true'])
+        y_pred = np.array(df[f'{target}_pred'])
         metrics = calculate_all_metrics(y_true, y_pred)
         df_metrics = pd.DataFrame(metrics.items())
         df_metrics.index += 1
@@ -69,11 +56,15 @@ def main(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset conversion')
-    parser.add_argument('--data_path', default='experiments/tune/CMA_abaqus_done.xlsx', type=str)
-    parser.add_argument('--save_dir', default='experiments/tune', type=str)
+    parser.add_argument('--data_path', default='experiments/verification/Verification_results.xlsx', type=str)
+    parser.add_argument('--optimizer', default='TPE', type=str, choices=['CMA', 'MOTPE', 'NSGA', 'QMC', 'RS', 'TPE'])
+    parser.add_argument('--alpha', default=None, type=float, choices=[0.2, 0.5, 1.0, 2.0, 5.0])
+    parser.add_argument('--save_dir', default='experiments/verification', type=str)
     args = parser.parse_args()
 
     main(
         data_path=args.data_path,
+        optimizer=args.optimizer,
+        alpha=args.alpha,
         save_dir=args.save_dir,
     )
