@@ -27,14 +27,17 @@ def main(
 ) -> None:
     df = pd.read_excel(data_path)
 
-    if optimizer is not None:
-        df = df[df['Optimizer'] == optimizer]
-
-    if alpha is not None:
+    if isinstance(alpha, float) and isinstance(optimizer, str):
+        df = df[(df['Alpha'] == alpha) & (df['Optimizer'] == optimizer)]
         save_path = os.path.join(save_dir, f'{optimizer}_{alpha:.1f}_metrics.xlsx')
-        df = df[df['Alpha'] == alpha]
-    else:
+    elif alpha is None and isinstance(optimizer, str):
+        df = df[df['Optimizer'] == optimizer]
         save_path = os.path.join(save_dir, f'{optimizer}_metrics.xlsx')
+    elif isinstance(alpha, float) and optimizer is None:
+        df = df[df['Alpha'] == alpha]
+        save_path = os.path.join(save_dir, f'{alpha}_metrics.xlsx')
+    else:
+        save_path = os.path.join(save_dir, f'Overall_metrics.xlsx')
 
     os.makedirs(save_dir, exist_ok=True)
     writer = pd.ExcelWriter(save_path, engine='xlsxwriter')
