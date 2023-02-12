@@ -29,3 +29,5 @@ The proposed approach steps consist of:
 
 ## ℹ️ Results
 A qualitative examination of the optimization results confirms the efficiency of the algorithms. All algorithms effectively selected parameter combinations that resulted in optimal leaflet opening while minimizing stress. The optimal leaflet models typically exhibit high opening areas while maintaining moderate stress values, which in most cases do not exceed 2.0 MPa. This is well below the strength limit of the material models. It is noteworthy that the optimization algorithms show similar trends in selecting the best geometric indicators.
+
+https://user-images.githubusercontent.com/32963687/218337677-40aab66a-23f6-405b-afdc-b4253bdf220c.mp4
