@@ -26,3 +26,6 @@ The proposed approach steps consist of:
 <p align="center">
     Figure 1. Overview of the proposed multistage generative approach
 </p>
+
+## ℹ️ Results
+A qualitative examination of the optimization results confirms the efficiency of the algorithms. All algorithms effectively selected parameter combinations that resulted in optimal leaflet opening while minimizing stress. The optimal leaflet models typically exhibit high opening areas while maintaining moderate stress values, which in most cases do not exceed 2.0 MPa. This is well below the strength limit of the material models. It is noteworthy that the optimization algorithms show similar trends in selecting the best geometric indicators.
