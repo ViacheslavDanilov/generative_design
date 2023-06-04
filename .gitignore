@@ -144,7 +144,8 @@ logs/
 AutoML*/
 
 # Models
-models/
+models/LMN
+models/STS
 
 # Different computations
 calculations/
