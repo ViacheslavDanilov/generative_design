@@ -20,7 +20,7 @@ The proposed approach steps consist of:
 * Test the generated [PHV](https://en.wikipedia.org/wiki/Artificial_heart_valve) designs using finite element modeling
 
 <p align="center">
-  <img width="100%" height="100%" src="media/workflow.png" alt="Approach overview">
+  <img width="80%" height="80%" src="media/workflow.png" alt="Approach overview">
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ The proposed approach steps consist of:
 A qualitative examination of the optimization results confirms the efficiency of the algorithms. All algorithms effectively selected parameter combinations that resulted in optimal leaflet opening while minimizing stress, as demonstrated in Figure 2. The optimal leaflet models typically exhibit high opening areas while maintaining moderate stress values, which in most cases do not exceed 2.0 MPa. This is well below the strength limit of the material models. It is noteworthy that the optimization algorithms show similar trends in selecting the best geometric indicators.
 
 <p align="center">
-  <img width="100%" height="100%" src="media/generated_valves.png" alt="Approach overview">
+  <img width="80%" height="80%" src="media/generated_valves.png" alt="Approach overview">
 </p>
 
 <p align="center">
