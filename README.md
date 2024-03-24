@@ -109,7 +109,7 @@ git clone https://github.com/ViacheslavDanilov/generative_design.git
 
 **Step 3:** Create a conda environment and install the requirements for the repository
 ``` bash
-cd oct_segmentation
+cd generative_design
 chmod +x create_env.sh
 source create_env.sh
 ```
