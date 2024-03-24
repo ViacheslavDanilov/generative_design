@@ -5,7 +5,7 @@
 
 <a name="contents"></a>
 ## 📖 Contents
-- [Purpose](#purpose)
+- [Introduction](#introduction)
 - [Data](#data)
 - [Methods](#methods)
   - [Parametric Design and Finite Element Analysis](#parametric-design)
@@ -18,8 +18,8 @@
 - [Data Access](#data-access)
 - [How to Cite](#how-to-cite)
 
-<a name="purpose"></a>
-## 🎯 Purpose
+<a name="introduction"></a>
+## 🎯 Introduction
 This study proposes a novel method for designing prosthetic heart valves (PHVs) by combining machine learning (ML) with optimization algorithms. This approach aims to overcome the limitations of traditional design methods, such as [Computer-Aided Design](https://en.wikipedia.org/wiki/Computer-aided_design) (CAD) and [Finite Element Method](https://en.wikipedia.org/wiki/Finite_element_method) (FEM), by automating the exploration of the vast design space, enabling the rapid development of PHVs that are potentially more effective and durable.
 
 <a name="data"></a>
