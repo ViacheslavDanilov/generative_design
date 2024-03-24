@@ -8,9 +8,6 @@
 - [Introduction](#introduction)
 - [Data](#data)
 - [Methods](#methods)
-  - [Parametric Design and Finite Element Analysis](#parametric-design)
-  - [Machine Learning Models](#ml-models)
-  - [Optimization Algorithms](#optimization-algorithms)
 - [Results](#results)
 - [Conclusion](#conclusion)
 - [Requirements](#requirements)
@@ -37,15 +34,12 @@ Our dataset comprises 11,565 unique PHV designs, meticulously generated through 
 <a name="methods"></a>
 ## 🔬 Methods
 
-<a name="parametric-design"></a>
 ### Parametric Design and Finite Element Analysis
 Initially, PHV designs were generated using MATLAB, varying the six key parameters within predefined ranges. These designs were then analyzed using "Abaqus/CAE" to simulate their mechanical behavior under physiological pressures. The simulation results provided us with LMN and STS values for each design.
 
-<a name="ml-models"></a>
 ### Machine Learning Models
 With the dataset in hand, we explored a variety of machine learning algorithms, focusing particularly on ensemble methods due to their robustness and accuracy. The dataset was split into training and validation sets, with 80% for training and 20% for validation. We evaluated the performance of decision trees, random forests, gradient boosting machines (including XGBoost, LightGBM, and CatBoost), and neural networks, ultimately focusing on ensemble models that combined the strengths of multiple algorithms.
 
-<a name="optimization-algorithms"></a>
 ### Optimization Algorithms
 For the optimization phase, we employed six state-of-the-art algorithms: [Random Search](https://www.jmlr.org/papers/v13/bergstra12a.html) (RS), [Tree-structured Parzen Estimator](https://papers.nips.cc/paper/2011/hash/86e8f7ab32cfd12577bc2619bc635690-Abstract.html) (TPE), [CMA-ES-based Algorithm](https://arxiv.org/abs/1604.00772) (CMA), [Nondominated Sorting Genetic Algorithm](https://ieeexplore.ieee.org/document/996017) (NSGA), [Multiobjective Tree-structured Parzen Estimator](https://www.jair.org/index.php/jair/article/view/13188) (MTPE), [Quasi-Monte Carlo Algorithm](https://www.jmlr.org/papers/v13/bergstra12a.html) (QMC). Each algorithm was tasked with finding the optimal set of design parameters that maximized the opening area while minimizing the peak stress, iterating through 2,000 design simulations per algorithm.
 
