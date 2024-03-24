@@ -86,18 +86,22 @@ Our generative design approach offers a significant advancement in the developme
 
 <a name="requirements"></a>
 ## 💻 Requirements
-
-- Python 3.8.x
-- DVC for data version control
-  - `dvc==2.41.1`
-  - `dvc-gdrive==2.19.2`
-- Operating Systems Supported:
+- Operating System
   - [x] macOS
   - [x] Linux
-  - [x] Windows
+  - [x] Windows (limited testing carried out)
+- Python 3.8.x
+- Required core packages: [requirements.txt](https://github.com/ViacheslavDanilov/generative_design/blob/main/requirements.txt)
 
 <a name="installation"></a>
 ## ⚙ Installation
+
+
+<a name="data-access"></a>
+## 🔐 Data Access
+All essential components of the study, including the curated dataset and trained models, have been made publicly available:
+- Dataset: [https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx](https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx).
+- Models: [https://zenodo.org/doi/10.5281/zenodo.10865907](https://zenodo.org/doi/10.5281/zenodo.10865907).
 
 # OLD
 
