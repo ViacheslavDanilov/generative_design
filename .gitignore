@@ -144,8 +144,8 @@ logs/
 AutoML*/
 
 # Models
-models/LMN
-models/STS
+models*/*/
+models*/*.zip
 
 # Different computations
 calculations/
