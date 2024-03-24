@@ -73,7 +73,7 @@ The [**valve opening directory**](https://github.com/ViacheslavDanilov/generativ
   <img id="figure-2" width="80%" height="80%" src="media/generated_valves.png" alt="Approach overview">
 </p>
 
-<p align="center">
+<p align="left">
     <em><strong>Figure 2.</strong> Examples of final designs resulting from the studied optimizers: epiphyses in the open state after pressure application simulation. The initial geometry from which all algorithms started optimization is also presented.</em>
 </p>
 
