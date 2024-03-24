@@ -102,3 +102,9 @@ Our generative design approach offers a significant advancement in the developme
 All essential components of the study, including the curated dataset and trained models, have been made publicly available:
 - Dataset: [https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx](https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx).
 - Models: [https://zenodo.org/doi/10.5281/zenodo.10865907](https://zenodo.org/doi/10.5281/zenodo.10865907).
+
+<a name="how-to-cite"></a>
+## 🖊️ How to Cite
+Please cite [our paper](https://doi.org/10.3389/fbioe.2023.1238130) if you found our data, methods, or results helpful for your research:
+
+> Danilov V.V., Klyshnikov K.Y., Onishenko P.S., Proutski A., Gankin Y., Melgani F., Ovcharenko E.A. (**2023**). _Perfect prosthetic heart valve: generative design with machine learning, modeling, and optimization_. **Frontiers in Bioengineering and Biotechnology**. DOI: [https://doi.org/10.3389/fbioe.2023.1238130](https://doi.org/10.3389/fbioe.2023.1238130)
