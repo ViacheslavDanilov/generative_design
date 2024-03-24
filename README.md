@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10865908.svg)](https://doi.org/10.5281/zenodo.10865908)
 [![DOI](https://img.shields.io/badge/DOI-10.3389/fbioe.2023.1238130-B31B1B)](https://doi.org/10.3389/fbioe.2023.1238130)
 
-# Generative design with ML, modeling, and optimization
+# Perfect prosthetic heart valve: generative design with machine learning, modeling, and optimization
 
 <a name="contents"></a>
 ## 📖 Contents
