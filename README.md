@@ -95,7 +95,24 @@ Our generative design approach offers a significant advancement in the developme
 
 <a name="installation"></a>
 ## ⚙ Installation
+**Step 1:** Download and install Miniconda
+``` bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-py38_22.11.1-1-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+```
 
+**Step 2:** Clone the repository
+``` bash
+git clone https://github.com/ViacheslavDanilov/generative_design.git
+```
+
+**Step 3:** Create a conda environment and install the requirements for the repository
+``` bash
+cd oct_segmentation
+chmod +x create_env.sh
+source create_env.sh
+```
 
 <a name="data-access"></a>
 ## 🔐 Data Access
