@@ -117,8 +117,8 @@ source create_env.sh
 <a name="data-access"></a>
 ## 🔐 Data Access
 All essential components of the study, including the curated dataset and trained models, have been made publicly available:
-- Dataset: [https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx](https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx).
-- Models: [https://zenodo.org/doi/10.5281/zenodo.10865907](https://zenodo.org/doi/10.5281/zenodo.10865907).
+- **Dataset:** [https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx](https://github.com/ViacheslavDanilov/generative_design/raw/main/dataset/data.xlsx).
+- **Models:** [https://zenodo.org/doi/10.5281/zenodo.10865907](https://zenodo.org/doi/10.5281/zenodo.10865907).
 
 <a name="how-to-cite"></a>
 ## 🖊️ How to Cite
